@@ -1,0 +1,11 @@
+[requires]
+tl-expected/1.0.0
+fmt/8.1.1
+catch2/2.13.8
+
+[generators]
+cmake
+
+[options]
+fmt:header_only=True
+
