@@ -1,5 +1,6 @@
 [requires]
 tl-expected/1.0.0
+tl-optional/1.0.0
 fmt/8.1.1
 catch2/2.13.8
 

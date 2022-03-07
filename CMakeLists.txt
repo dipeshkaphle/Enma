@@ -5,9 +5,9 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_FLAGS "-fsanitize=address -Wall -Wextra -Wpedantic")
-set(CMAKE_CXX_FLAGS_DEBUG "-g")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wpedantic")
+set(CMAKE_CXX_FLAGS_DEBUG "-g -fsanitize=address")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -static")
 
 # Turn on debug flag with -DDEBUG, turn it off with -DDEBUG=OFF
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DDEBUG")
@@ -27,7 +27,7 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 # Conan setup for dependecies
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup(TARGETS)
-conan_basic_setup()
+# conan_basic_setup()
 
 # Always enable colors, since Ninja strips them
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
