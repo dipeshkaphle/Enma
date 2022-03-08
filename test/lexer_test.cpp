@@ -5,6 +5,8 @@
 #include <iterator>
 #include <ranges>
 
+#include <tl/to.hpp>
+
 TEST_CASE("Lexer") {
   std::string source = R"(
 data Position = {
@@ -17,12 +19,16 @@ data Position = {
   const auto &all_toks = lexer.scan_tokens();
   using tok = TokenType;
 
-  REQUIRE(ranges::equal(
-      all_toks | views::transform(
-                     [](const Token &tok) -> TokenType { return tok.type; }),
-      std::vector<TokenType>{
-          tok::DATA, tok::IDENTIFIER, tok::EQUAL, tok::LEFT_BRACE,
-          tok::IDENTIFIER, tok::COLON, tok::IDENTIFIER, tok::SEMICOLON,
-          tok::IDENTIFIER, tok::COLON, tok::IDENTIFIER, tok::SEMICOLON,
-          tok::RIGHT_BRACE, tok::SEMICOLON, tok::ENDOFFILE}));
+  auto all_types = all_toks |
+                   views::transform([](const Token &token) -> TokenType {
+                     return token.type;
+                   }) |
+                   tl::to<std::vector<TokenType>>();
+
+  REQUIRE(all_types == std::vector<TokenType>{
+                           tok::DATA, tok::IDENTIFIER, tok::EQUAL,
+                           tok::LEFT_BRACE, tok::IDENTIFIER, tok::COLON,
+                           tok::IDENTIFIER, tok::SEMICOLON, tok::IDENTIFIER,
+                           tok::COLON, tok::IDENTIFIER, tok::SEMICOLON,
+                           tok::RIGHT_BRACE, tok::SEMICOLON, tok::ENDOFFILE});
 }

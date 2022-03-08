@@ -49,6 +49,9 @@ if(NOT BUILD_PROJECT STREQUAL "no_tests")
   include(${CMAKE_SCRIPTS_PATH}/cmake-format.cmake)
 endif()
 
+set(RANGES_BUILD_TESTS OFF)
+add_subdirectory(ext/ranges)
+
 if(BUILD_PROJECT STREQUAL "no_tests")
   add_subdirectory(frontend)
   add_subdirectory(backend)
