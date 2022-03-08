@@ -37,6 +37,10 @@ jobs:
       if: steps.cache-python.outputs.cache-hit != 'true'
       run: pip install -r requirements.txt
 
+    - uses: actions/checkout@v2
+      with:
+          submodules: true
+
     - name: Attempt to use cached dependencies
       id: cache-conan
       uses: actions/cache@v2
@@ -57,7 +61,7 @@ jobs:
 
     - name: Configure CMake
       if: steps.cache-cmake.outputs.cache-hit != 'true'
-      run: cmake -G Ninja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+      run: bash setup_build.sh && cmake -G Ninja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
 
     - name: Build
       working-directory: ${{github.workspace}}/build
