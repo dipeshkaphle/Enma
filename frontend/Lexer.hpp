@@ -53,7 +53,7 @@ class Lexer {
    * appends a found token to tokens list
    */
   void add_token(TokenType type,
-                 const Token::literal_type &literal = std::monostate());
+                 const literal_type &literal = std::monostate());
 
   [[nodiscard]] std::string parse_with_escapes(string_view s) const;
 

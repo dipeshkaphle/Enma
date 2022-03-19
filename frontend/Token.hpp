@@ -12,8 +12,6 @@ private:
   [[nodiscard]] std::string literal_to_string() const;
 
 public:
-  using literal_type = literal_type;
-
   TokenType type;
   std::string lexeme;
   literal_type literal;
