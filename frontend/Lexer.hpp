@@ -11,7 +11,10 @@
 #include "Token.hpp"
 #include "TokenTypes.hpp"
 
-using namespace std;
+using std::string;
+using std::string_view;
+using std::unordered_map;
+using std::vector;
 
 class Lexer {
   string source;
@@ -71,7 +74,7 @@ class Lexer {
   void multiline_comment();
 
 public:
-  explicit Lexer(string source) : source(std::move(source)) {}
+  explicit Lexer(string source);
 
   /*
    * scans all the tokens

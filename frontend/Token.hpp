@@ -4,6 +4,7 @@
 #include <string>
 #include <variant>
 
+#include "Common.hpp"
 #include "TokenTypes.hpp"
 
 class Token {
@@ -11,9 +12,8 @@ private:
   [[nodiscard]] std::string literal_to_string() const;
 
 public:
-  // Our language has 5 literal types
-  using literal_type =
-      std::variant<std::monostate, int64_t, double, bool, char, std::string>;
+  using literal_type = literal_type;
+
   TokenType type;
   std::string lexeme;
   literal_type literal;

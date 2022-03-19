@@ -20,7 +20,7 @@ data Position = {
   using tok = TokenType;
 
   auto all_types = all_toks |
-                   views::transform([](const Token &token) -> TokenType {
+                   std::views::transform([](const Token &token) -> TokenType {
                      return token.type;
                    }) |
                    tl::to<std::vector<TokenType>>();

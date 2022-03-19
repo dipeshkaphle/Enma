@@ -7,6 +7,9 @@ template <class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
 // explicit deduction guide (not needed as of C++20)
 template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
+Token::Token(TokenType type, std::string lexeme, literal_type literal, int line)
+    : type(type), lexeme(move(lexeme)), literal(move(literal)), line(line) {}
+
 std::string Token::literal_to_string() const {
   using namespace std::string_literals;
   return std::visit(
@@ -19,8 +22,6 @@ std::string Token::literal_to_string() const {
       literal);
 }
 
-Token::Token(TokenType type, std::string lexeme, literal_type literal, int line)
-    : type(type), lexeme(move(lexeme)), literal(move(literal)), line(line) {}
 std::string Token::to_string() const {
   return fmt::format("Type: {}, Lexeme: {}, Literal: {}, Line : {}",
                      type_to_string(type), lexeme, literal_to_string(), line);

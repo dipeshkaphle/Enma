@@ -26,6 +26,8 @@ const unordered_map<string, TokenType> Lexer::keywords = {
     {"break", tok::BREAK},
     {"continue", tok::CONTINUE}};
 
+Lexer::Lexer(string source) : source(std::move(source)) {}
+
 char Lexer::peek() {
   if (is_at_end()) {
     return '\0';

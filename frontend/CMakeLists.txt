@@ -1,7 +1,8 @@
 add_executable(enma-frontend)
 add_library(enma-frontend-lib)
 
-target_sources(enma-frontend-lib PRIVATE Token.cpp Lexer.cpp Error.cpp)
+target_sources(enma-frontend-lib PRIVATE Token.cpp Lexer.cpp Error.cpp
+                                         Parser.cpp)
 
 target_sources(enma-frontend PRIVATE main.cpp)
 
