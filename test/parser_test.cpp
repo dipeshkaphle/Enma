@@ -22,4 +22,9 @@ TEST_CASE("Pratt Parser Test") {
   REQUIRE(PARSE_AND_SEXP("(((0)))") == "0");
   REQUIRE(PARSE_AND_SEXP("1+(2+(3+4))") == "(+ 1 (+ 2 (+ 3 4)))");
   REQUIRE(PARSE_AND_SEXP("f(g(1), 2)") == "(call f [(call g [1]), 2])");
+  REQUIRE(PARSE_AND_SEXP("f(1) + g(1,2)") ==
+          "(+ (call f [1]) (call g [1, 2]))");
+  REQUIRE(PARSE_AND_SEXP("1<2 ==  2<=3") == "(== (< 1 2) (<= 2 3))");
+  REQUIRE(PARSE_AND_SEXP("x=y=1") == "(= x (= y 1))");
+  REQUIRE(!PARSE("1=2").has_value());
 }

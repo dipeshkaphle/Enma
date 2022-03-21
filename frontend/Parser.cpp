@@ -136,13 +136,20 @@ expr_or_err Parser::expression(int binding_power) {
             // CALL EXPR
             maybe_final_expr = finish_call(std::move(lhs));
           } else {
+            if (op.type == TokenType::EQUAL) {
+              Expr *lhs_raw = lhs.get();
+              auto *lhs_as_var_expr = dynamic_cast<VarExpr *>(lhs_raw);
+              if (lhs_as_var_expr == nullptr) {
+                return tl::unexpected<parse_error>(
+                    parse_error("Invalid assignment, is not an lvalue"));
+              }
+            }
             maybe_final_expr = expression(rbp).and_then(
                 [&](std::unique_ptr<Expr> &&rhs) -> expr_or_err {
                   return std::make_unique<BinaryExpr>(
                       std::move(op), std::move(lhs), std::move(rhs));
                 });
           }
-
           RETURN_IF_ERR(maybe_final_expr);
           lhs = std::move(maybe_final_expr.value());
           continue;

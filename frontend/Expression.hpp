@@ -20,22 +20,21 @@ struct BinaryExpr : public Expr {
   std::unique_ptr<Expr> right;
   BinaryExpr(Token op, std::unique_ptr<Expr> left, std::unique_ptr<Expr> right);
   [[nodiscard]] string to_string() const override;
-} __attribute__((aligned(128))) __attribute__((packed));
+};
 
 struct PrefixExpr : public Expr {
   Token op;
   std::unique_ptr<Expr> right;
   PrefixExpr(Token op, std::unique_ptr<Expr> right);
   [[nodiscard]] string to_string() const override;
-
-} __attribute__((aligned(128))) __attribute__((packed));
+};
 
 struct VarExpr : public Expr {
   Token name;
   VarExpr(Token name);
 
   [[nodiscard]] string to_string() const override;
-} __attribute__((aligned(128))) __attribute__((packed));
+};
 
 struct LiteralExpr : public Expr {
   literal_type value;
@@ -51,6 +50,13 @@ struct CallExpr : public Expr {
   std::vector<std::unique_ptr<Expr>> arguments;
   CallExpr(std::unique_ptr<Expr> callee, Token paren,
            std::vector<std::unique_ptr<Expr>> args);
+  [[nodiscard]] string to_string() const override;
+};
+
+struct AssignExpr : public Expr {
+  Token name;
+  std::unique_ptr<Expr> value;
+  AssignExpr(Token name, std::unique_ptr<Expr> val);
   [[nodiscard]] string to_string() const override;
 };
 

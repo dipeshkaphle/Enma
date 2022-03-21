@@ -49,3 +49,9 @@ string CallExpr::to_string() const {
                                }) | tl::to<std::vector<std::string>>(),
                                ", "));
 }
+
+AssignExpr::AssignExpr(Token name, std::unique_ptr<Expr> val)
+    : name(std::move(name)), value(std::move(val)) {}
+string AssignExpr::to_string() const {
+  return fmt::format("(= {} {})", name.lexeme, value->to_string());
+}
