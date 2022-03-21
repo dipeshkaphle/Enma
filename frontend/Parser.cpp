@@ -18,42 +18,6 @@ using namespace expr;
 
 using expr_or_err = Parser::expr_or_err;
 
-const std::vector<TokenType> Parser::operators_tokens{
-    TokenType::LEFT_PAREN, TokenType::DOT,
-    TokenType::PLUS,       TokenType::MINUS,
-    TokenType::SLASH,      TokenType::STAR,
-    TokenType::AND,        TokenType::OR,
-    TokenType::BANG,       TokenType::BANG_EQUAL,
-    TokenType::EQUAL,      TokenType::EQUAL_EQUAL,
-    TokenType::GREATER,    TokenType::GREATER_EQUAL,
-    TokenType::LESS,       TokenType::LESS_EQUAL,
-
-};
-
-static const std::vector<TokenType> name_or_literals_tokens{
-    TokenType::IDENTIFIER, TokenType::STRING, TokenType::CHAR, TokenType::INT,
-    TokenType::DOUBLE,     TokenType::TRUE,   TokenType::FALSE
-
-};
-
-std::unordered_map<TokenType, int> Parser::prefix_binding_power{
-    {TokenType::LEFT_PAREN, 0},
-    {TokenType::BANG, 15},
-    {TokenType::PLUS, 16},
-    {TokenType::MINUS, 16},
-
-};
-std::unordered_map<TokenType, std::pair<int, int>> Parser::infix_binding_power{
-    {TokenType::LEFT_PAREN, {0, 0}},  {TokenType::EQUAL, {2, 1}},
-    {TokenType::OR, {3, 4}},          {TokenType::AND, {5, 6}},
-    {TokenType::EQUAL_EQUAL, {7, 8}}, {TokenType::BANG_EQUAL, {7, 8}},
-    {TokenType::LESS, {9, 10}},       {TokenType::LESS_EQUAL, {9, 10}},
-    {TokenType::GREATER, {9, 10}},    {TokenType::GREATER_EQUAL, {9, 10}},
-    {TokenType::PLUS, {11, 12}},      {TokenType::MINUS, {11, 12}},
-    {TokenType::SLASH, {13, 14}},     {TokenType::STAR, {13, 14}},
-    {TokenType::DOT, {18, 17}},       {TokenType::COMMA, {20, 19}},
-};
-
 Parser::Parser(std::vector<Token> _toks) : tokens(move(_toks)), cur(0) {}
 
 bool Parser::is_at_end() { return peek().type == TokenType::ENDOFFILE; }
@@ -123,6 +87,8 @@ Parser::parse_error Parser::error(const Token &tok, const char *err_msg) {
   return parse_error(err_msg);
 }
 
+// TODO: Handle function calls, basically the LEFT PAREN OPERATOR for infix is
+// to be handled properly
 expr_or_err Parser::expression(int binding_power) {
 
   return prefix_expression().and_then(
@@ -148,8 +114,8 @@ expr_or_err Parser::expression(int binding_power) {
               lhs = std::move(maybe_final_expr.value());
               continue;
             }
-            break;
           }
+          break;
         }
         return lhs;
       });
@@ -185,3 +151,29 @@ expr_or_err Parser::prefix_expression() {
   }
   return tl::unexpected<parse_error>(Parser::error(peek(), "Unexpected token"));
 }
+
+expr_or_err Parser::parse() { return expression(); }
+// Parser::expr_or_err PrefixParselet::parse(Parser &parser, Token &tok) {
+// if (Parser::prefix_binding_power.contains(tok.type)) {
+// Token op = parser.advance();
+// auto rbp = Parser::prefix_binding_power.at(op.type);
+// auto maybe_rhs = parser.expression(rbp);
+// RETURN_IF_ERR(maybe_rhs);
+// return std::make_unique<PrefixExpr>(op, std::move(maybe_rhs.value()));
+// }
+// return tl::unexpected<Parser::parse_error>(
+// Parser::error(parser.peek(), "Unexpected token"));
+// }
+
+// Parser::expr_or_err InfixParselet::parse(Parser &parser, Token &tok,
+// std::unique_ptr<expr::Expr> left) {
+// //
+
+// const auto [lbp, rbp] = Parser::infix_binding_power.at(tok.type);
+
+// return parser.expression(rbp).and_then(
+// [&](std::unique_ptr<Expr> &&rhs) -> expr_or_err {
+// return std::make_unique<BinaryExpr>(std::move(tok), std::move(left),
+// std::move(rhs));
+// });
+// }
