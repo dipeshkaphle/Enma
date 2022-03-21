@@ -104,6 +104,8 @@ private:
 
   static parse_error error(const Token &tok, const char *err_msg);
 
+  expr_or_err finish_call(std::unique_ptr<expr::Expr> callee);
+
   expr_or_err expression(int binding_power = 0);
 
   expr_or_err prefix_expression();

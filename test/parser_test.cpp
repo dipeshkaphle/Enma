@@ -21,4 +21,5 @@ TEST_CASE("Pratt Parser Test") {
   REQUIRE(PARSE_AND_SEXP("1+2+3+4") == "(+ (+ (+ 1 2) 3) 4)");
   REQUIRE(PARSE_AND_SEXP("(((0)))") == "0");
   REQUIRE(PARSE_AND_SEXP("1+(2+(3+4))") == "(+ 1 (+ 2 (+ 3 4)))");
+  REQUIRE(PARSE_AND_SEXP("f(g(1), 2)") == "(call f [(call g [1]), 2])");
 }

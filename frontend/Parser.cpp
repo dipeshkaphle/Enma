@@ -87,38 +87,71 @@ Parser::parse_error Parser::error(const Token &tok, const char *err_msg) {
   return parse_error(err_msg);
 }
 
+expr_or_err Parser::finish_call(std::unique_ptr<Expr> callee) {
+  // by limiting the array to 255 size, we limit the maximum number of arguments
+  // that can be passed to a function to 255
+  std::array<std::unique_ptr<Expr>, 255> arguments;
+  auto it = arguments.begin();
+  if (!check(TokenType::RIGHT_PAREN)) {
+    do {
+      if (it == arguments.end()) {
+        return tl::make_unexpected<parse_error>(
+            this->error(peek(), "Cant have more than 255 arguments"));
+      }
+      auto expr = this->expression();
+      RETURN_IF_ERR(expr);
+      *it = move(expr.value());
+      std::advance(it, 1);
+    } while (match({TokenType::COMMA}));
+  }
+  auto paren = consume(TokenType::RIGHT_PAREN, "Expect ')' after arguments");
+  RETURN_IF_ERR(paren);
+  vector<std::unique_ptr<Expr>> vec(make_move_iterator(arguments.begin()),
+                                    make_move_iterator(it));
+  return make_unique<CallExpr>(move(callee), paren.value(), move(vec));
+}
+
 // TODO: Handle function calls, basically the LEFT PAREN OPERATOR for infix is
 // to be handled properly
 expr_or_err Parser::expression(int binding_power) {
 
-  return prefix_expression().and_then(
-      [&](std::unique_ptr<Expr> &&lhs) -> expr_or_err {
-        while (true) {
+  return prefix_expression().and_then([&](std::unique_ptr<Expr> &&lhs)
+                                          -> expr_or_err {
+    while (true) {
 
-          if (any_of_at_peek(Parser::operators_tokens)) {
-            auto op = peek();
-            if (infix_binding_power.contains(op.type)) {
+      if (any_of_at_peek(Parser::operators_tokens)) {
+        auto op = peek();
+        if (infix_binding_power.contains(op.type)) {
 
-              const auto [lbp, rbp] = infix_binding_power.at(op.type);
-              if (lbp < binding_power) {
-                break;
-              }
-
-              advance();
-              auto maybe_final_expr = expression(rbp).and_then(
-                  [&](std::unique_ptr<Expr> &&rhs) -> expr_or_err {
-                    return std::make_unique<BinaryExpr>(
-                        std::move(op), std::move(lhs), std::move(rhs));
-                  });
-              RETURN_IF_ERR(maybe_final_expr);
-              lhs = std::move(maybe_final_expr.value());
-              continue;
-            }
+          const auto [lbp, rbp] = infix_binding_power.at(op.type);
+          if (lbp < binding_power) {
+            break;
           }
-          break;
+
+          advance();
+          expr_or_err maybe_final_expr =
+              tl::unexpected<parse_error>(parse_error(
+                  "Something is wrong in the parser if you see this as error"));
+          if (op.type == TokenType::LEFT_PAREN) {
+            // CALL EXPR
+            maybe_final_expr = finish_call(std::move(lhs));
+          } else {
+            maybe_final_expr = expression(rbp).and_then(
+                [&](std::unique_ptr<Expr> &&rhs) -> expr_or_err {
+                  return std::make_unique<BinaryExpr>(
+                      std::move(op), std::move(lhs), std::move(rhs));
+                });
+          }
+
+          RETURN_IF_ERR(maybe_final_expr);
+          lhs = std::move(maybe_final_expr.value());
+          continue;
         }
-        return lhs;
-      });
+      }
+      break;
+    }
+    return lhs;
+  });
 }
 
 expr_or_err Parser::prefix_expression() {

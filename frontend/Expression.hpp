@@ -45,4 +45,13 @@ struct LiteralExpr : public Expr {
   [[nodiscard]] string to_string() const override;
 };
 
+struct CallExpr : public Expr {
+  std::unique_ptr<Expr> callee;
+  Token paren;
+  std::vector<std::unique_ptr<Expr>> arguments;
+  CallExpr(std::unique_ptr<Expr> callee, Token paren,
+           std::vector<std::unique_ptr<Expr>> args);
+  [[nodiscard]] string to_string() const override;
+};
+
 } // namespace expr
