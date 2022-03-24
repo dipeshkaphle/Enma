@@ -135,6 +135,23 @@ expr_or_err Parser::expression(int binding_power) {
           if (op.type == TokenType::LEFT_PAREN) {
             // CALL EXPR
             maybe_final_expr = finish_call(std::move(lhs));
+          } else if (op.type == TokenType::IF) {
+            // conditional expr  ,
+            // <expr> if <cond> else <expr>
+
+            maybe_final_expr = expression().and_then([&](auto &&condition) {
+              //
+              return consume(TokenType::ELSE, "Expected else after condition "
+                                              "in conditional expression")
+                  .and_then([&](auto &&) {
+                    return expression().map([&](auto &&else_expr) {
+                      return std::make_unique<ConditionalExpr>(
+                          std::forward<decltype(condition)>(condition),
+                          std::move(lhs),
+                          std::forward<decltype(else_expr)>(else_expr));
+                    });
+                  });
+            });
           } else {
             if (op.type == TokenType::EQUAL) {
               Expr *lhs_raw = lhs.get();

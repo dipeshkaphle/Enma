@@ -37,6 +37,7 @@ public:
       TokenType::EQUAL,      TokenType::EQUAL_EQUAL,
       TokenType::GREATER,    TokenType::GREATER_EQUAL,
       TokenType::LESS,       TokenType::LESS_EQUAL,
+      TokenType::IF // for conditionals
 
   };
 
@@ -60,20 +61,21 @@ public:
   static const inline std::unordered_map<TokenType, std::pair<int, int>>
       infix_binding_power{
           {TokenType::EQUAL, {2, 1}},
-          {TokenType::OR, {3, 4}},
-          {TokenType::AND, {5, 6}},
-          {TokenType::EQUAL_EQUAL, {7, 8}},
-          {TokenType::BANG_EQUAL, {7, 8}},
-          {TokenType::LESS, {9, 10}},
-          {TokenType::LESS_EQUAL, {9, 10}},
-          {TokenType::GREATER, {9, 10}},
-          {TokenType::GREATER_EQUAL, {9, 10}},
-          {TokenType::PLUS, {11, 12}},
-          {TokenType::MINUS, {11, 12}},
-          {TokenType::SLASH, {13, 14}},
-          {TokenType::STAR, {13, 14}},
-          {TokenType::DOT, {18, 17}},
-          {TokenType::LEFT_PAREN, {19, 20}},
+          {TokenType::IF, {4, 3}},
+          {TokenType::OR, {5, 6}},
+          {TokenType::AND, {7, 8}},
+          {TokenType::EQUAL_EQUAL, {9, 10}},
+          {TokenType::BANG_EQUAL, {9, 10}},
+          {TokenType::LESS, {11, 12}},
+          {TokenType::LESS_EQUAL, {11, 12}},
+          {TokenType::GREATER, {11, 12}},
+          {TokenType::GREATER_EQUAL, {11, 12}},
+          {TokenType::PLUS, {13, 14}},
+          {TokenType::MINUS, {13, 14}},
+          {TokenType::SLASH, {15, 16}},
+          {TokenType::STAR, {15, 16}},
+          {TokenType::DOT, {20, 19}},
+          {TokenType::LEFT_PAREN, {21, 22}},
       };
 
   // static const std::vector<TokenType> operators_tokens;

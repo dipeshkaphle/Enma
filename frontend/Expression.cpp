@@ -55,3 +55,14 @@ AssignExpr::AssignExpr(Token name, std::unique_ptr<Expr> val)
 string AssignExpr::to_string() const {
   return fmt::format("(= {} {})", name.lexeme, value->to_string());
 }
+
+ConditionalExpr::ConditionalExpr(std::unique_ptr<Expr> cond,
+                                 std::unique_ptr<Expr> then_expr,
+                                 std::unique_ptr<Expr> else_expr)
+    : cond(std::move(cond)), then_expr(std::move(then_expr)),
+      else_expr(std::move(else_expr)) {}
+
+string ConditionalExpr::to_string() const {
+  return fmt::format("(if {} {} {})", cond->to_string(), then_expr->to_string(),
+                     else_expr->to_string());
+}

@@ -27,4 +27,6 @@ TEST_CASE("Pratt Parser Test") {
   REQUIRE(PARSE_AND_SEXP("1<2 ==  2<=3") == "(== (< 1 2) (<= 2 3))");
   REQUIRE(PARSE_AND_SEXP("x=y=1") == "(= x (= y 1))");
   REQUIRE(!PARSE("1=2").has_value());
+  REQUIRE(PARSE_AND_SEXP("2 if (1==2) else 3") == "(if (== 1 2) 2 3)");
+  REQUIRE(PARSE_AND_SEXP("2 if 1==2 else 3") == "(if (== 1 2) 2 3)");
 }

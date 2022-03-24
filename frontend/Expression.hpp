@@ -60,4 +60,14 @@ struct AssignExpr : public Expr {
   [[nodiscard]] string to_string() const override;
 };
 
+struct ConditionalExpr : public Expr {
+  std::unique_ptr<Expr> cond;
+  std::unique_ptr<Expr> then_expr;
+  std::unique_ptr<Expr> else_expr;
+  ConditionalExpr(std::unique_ptr<Expr> cond, std::unique_ptr<Expr> then_expr,
+                  std::unique_ptr<Expr> else_expr);
+
+  [[nodiscard]] string to_string() const override;
+};
+
 } // namespace expr
