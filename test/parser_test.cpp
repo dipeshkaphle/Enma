@@ -16,7 +16,7 @@ TEST_CASE("Pratt Parser Test") {
   REQUIRE(PARSE_AND_SEXP("1*2") == "(* 1 2)");
   REQUIRE(PARSE_AND_SEXP("1+2*3+10") == "(+ (+ 1 (* 2 3)) 10)");
   REQUIRE(PARSE_AND_SEXP("2+-3*-10") == "(+ 2 (* (- 3) (- 10)))");
-  REQUIRE(PARSE_AND_SEXP("f.g.h") == "(. f (. g h))");
+  REQUIRE(PARSE_AND_SEXP("f.g.h") == "(. (. f g) h)");
   REQUIRE(PARSE_AND_SEXP("-f.g") == "(- (. f g))");
   REQUIRE(PARSE_AND_SEXP("1+2+3+4") == "(+ (+ (+ 1 2) 3) 4)");
   REQUIRE(PARSE_AND_SEXP("(((0)))") == "0");

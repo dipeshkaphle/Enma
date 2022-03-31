@@ -170,7 +170,9 @@ void Lexer::get_number() {
 }
 
 void Lexer::get_identifier() {
-  while ((isalpha(peek()) != 0) || (isdigit(peek()) != 0) || peek() == '_') {
+  //[a-zA-Z_][a-zA-Z0-9_']*
+  while ((isalpha(peek()) != 0) || (isdigit(peek()) != 0) || peek() == '_' ||
+         peek() == '\'') {
     advance();
   }
 

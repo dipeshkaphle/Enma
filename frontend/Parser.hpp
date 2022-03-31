@@ -74,7 +74,7 @@ public:
           {TokenType::MINUS, {13, 14}},
           {TokenType::SLASH, {15, 16}},
           {TokenType::STAR, {15, 16}},
-          {TokenType::DOT, {20, 19}},
+          {TokenType::DOT, {19, 20}},
           {TokenType::LEFT_PAREN, {21, 22}},
       };
 
