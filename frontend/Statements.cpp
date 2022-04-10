@@ -6,20 +6,41 @@
 
 #include <iterator>
 
+Stmt::~Stmt() = default;
+
 BlockStmt::BlockStmt(std::vector<stmt_ptr> stmts)
     : statements(std::move(stmts)) {}
 BlockStmt::BlockStmt(BlockStmt &&stmt) noexcept
     : statements(std::move(stmt.statements)) {}
-string BlockStmt::to_sexp() const { return fmt::format(""); }
+string BlockStmt::to_sexp() const {
+  return fmt::format(
+      "(Block [{}])",
+      fmt::join(
+
+          this->statements | std::views::transform([&](auto &stmt) {
+            return stmt.to_sexp();
+          }) | tl::to<std::vector<std::string>>(),
+          "\n"));
+}
 
 BreakStmt::BreakStmt() = default;
-string BreakStmt::to_sexp() const { return fmt::format(""); }
+string BreakStmt::to_sexp() const { return fmt::format("(break)"); }
 
 ContinueStmt::ContinueStmt() = default;
-string ContinueStmt::to_sexp() const { return fmt::format(""); }
+string ContinueStmt::to_sexp() const { return fmt::format("(continue)"); }
 
-DataDeclStmt::DataDeclStmt() = default;
-string DataDeclStmt::to_sexp() const { return fmt::format(""); }
+DataDeclStmt::DataDeclStmt(Token struct_name, std::vector<Token> names,
+                           std::vector<Token> types)
+    : struct_name(std::move(struct_name)), names(std::move(names)),
+      types(std::move(types)) {}
+string DataDeclStmt::to_sexp() const {
+  return fmt::format(
+      "(DataDefn {} [{}])", this->struct_name.lexeme,
+      fmt::join(this->names | std::views::transform([&](auto &tok) {
+                  return tok.lexeme;
+                }) | tl::to<std::vector<std::string>>,
+                ","));
+}
 
 ExprStmt::ExprStmt(std::unique_ptr<Expr> expr) : expr(std::move(expr)) {}
 string ExprStmt::to_sexp() const { return fmt::format("{}", expr->to_sexp()); }
@@ -38,8 +59,9 @@ IfStmt::IfStmt(std::unique_ptr<Expr> condition,
       else_branch(std::move(else_branch)) {}
 string IfStmt::to_sexp() const { return fmt::format(""); }
 
-LetStmt::LetStmt(Token name, std::unique_ptr<Expr> expr)
-    : name(std::move(name)), initializer_expr(std::move(expr)) {}
+LetStmt::LetStmt(Token name, Token type, std::unique_ptr<Expr> expr)
+    : name(std::move(name)), type(std::move(type)),
+      initializer_expr(std::move(expr)) {}
 string LetStmt::to_sexp() const { return fmt::format(""); }
 
 PrintStmt::PrintStmt(std::unique_ptr<Expr> expr, bool new_line)

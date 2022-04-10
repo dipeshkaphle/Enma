@@ -120,7 +120,9 @@ private:
   stmt_or_err let_declaration();
   stmt_or_err if_statement();
   stmt_or_err while_statement();
-  stmt_or_err for_statement();
+  // stmt_or_err for_statement();
+  stmt_or_err data_definition();
+
   tl::expected<std::vector<std::unique_ptr<Stmt>>, parse_error> block();
 
 public:

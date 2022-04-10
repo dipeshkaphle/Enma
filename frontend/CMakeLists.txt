@@ -8,6 +8,7 @@ target_sources(
           Error.cpp
           Parser.cpp
           Expression.cpp
+          Statements.cpp
           Common.cpp)
 
 target_sources(enma-frontend PRIVATE main.cpp)

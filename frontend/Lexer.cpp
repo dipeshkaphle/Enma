@@ -14,7 +14,7 @@ const unordered_map<string, TokenType> Lexer::keywords = {
     {"else", tok::ELSE},
     {"false", tok::FALSE},
     {"true", tok::TRUE},
-    {"for", tok::FOR},
+    // {"for", tok::FOR},
     {"fn", tok::FN},
     {"if", tok::IF},
     {"nil", tok::NIL},

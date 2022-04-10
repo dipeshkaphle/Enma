@@ -35,7 +35,11 @@ struct ContinueStmt : public Stmt {
 };
 
 struct DataDeclStmt : public Stmt {
-  DataDeclStmt();
+  Token struct_name;
+  std::vector<Token> names;
+  std::vector<Token> types;
+  DataDeclStmt(Token struct_name, std::vector<Token> names,
+               std::vector<Token> types);
   [[nodiscard]] string to_sexp() const override;
 };
 
@@ -66,8 +70,9 @@ struct IfStmt : public Stmt {
 };
 struct LetStmt : public Stmt {
   Token name;
+  Token type;
   std::unique_ptr<Expr> initializer_expr;
-  LetStmt(Token name, std::unique_ptr<Expr> expr);
+  LetStmt(Token name, Token type, std::unique_ptr<Expr> expr);
   [[nodiscard]] string to_sexp() const override;
 };
 struct PrintStmt : public Stmt {
