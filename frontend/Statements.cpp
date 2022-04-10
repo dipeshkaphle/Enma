@@ -18,7 +18,7 @@ string BlockStmt::to_sexp() const {
       fmt::join(
 
           this->statements | std::views::transform([&](auto &stmt) {
-            return stmt.to_sexp();
+            return stmt->to_sexp();
           }) | tl::to<std::vector<std::string>>(),
           "\n"));
 }
@@ -36,9 +36,9 @@ DataDeclStmt::DataDeclStmt(Token struct_name, std::vector<Token> names,
 string DataDeclStmt::to_sexp() const {
   return fmt::format(
       "(DataDefn {} [{}])", this->struct_name.lexeme,
-      fmt::join(this->names | std::views::transform([&](auto &tok) {
+      fmt::join(this->names | std::views::transform([&](const Token &tok) {
                   return tok.lexeme;
-                }) | tl::to<std::vector<std::string>>,
+                }) | tl::to<std::vector<std::string>>(),
                 ","));
 }
 
