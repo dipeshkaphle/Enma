@@ -209,28 +209,21 @@ expr_or_err Parser::prefix_expression() {
   return tl::unexpected<parse_error>(Parser::error(peek(), "Unexpected token"));
 }
 
-expr_or_err Parser::parse() { return expression(); }
-// Parser::expr_or_err PrefixParselet::parse(Parser &parser, Token &tok) {
-// if (Parser::prefix_binding_power.contains(tok.type)) {
-// Token op = parser.advance();
-// auto rbp = Parser::prefix_binding_power.at(op.type);
-// auto maybe_rhs = parser.expression(rbp);
-// RETURN_IF_ERR(maybe_rhs);
-// return std::make_unique<PrefixExpr>(op, std::move(maybe_rhs.value()));
-// }
-// return tl::unexpected<Parser::parse_error>(
-// Parser::error(parser.peek(), "Unexpected token"));
-// }
+expr_or_err Parser::parse_expr() { return expression(); }
 
-// Parser::expr_or_err InfixParselet::parse(Parser &parser, Token &tok,
-// std::unique_ptr<expr::Expr> left) {
-// //
+Parser::stmt_or_err Parser::statement() {}
+Parser::stmt_or_err Parser::break_statement() {}
+Parser::stmt_or_err Parser::continue_statement() {}
+Parser::stmt_or_err Parser::expression_statement() {}
+Parser::stmt_or_err Parser::print_statement(bool new_line) {}
+Parser::stmt_or_err Parser::return_statement() {}
+Parser::stmt_or_err Parser::declaration() {}
+Parser::stmt_or_err Parser::fn_declaration(const std::string &type) {}
+Parser::stmt_or_err Parser::let_declaration() {}
+Parser::stmt_or_err Parser::if_statement() {}
+Parser::stmt_or_err Parser::while_statement() {}
+Parser::stmt_or_err Parser::for_statement() {}
+tl::expected<std::vector<std::unique_ptr<Stmt>>, Parser::parse_error>
+Parser::block() {}
 
-// const auto [lbp, rbp] = Parser::infix_binding_power.at(tok.type);
-
-// return parser.expression(rbp).and_then(
-// [&](std::unique_ptr<Expr> &&rhs) -> expr_or_err {
-// return std::make_unique<BinaryExpr>(std::move(tok), std::move(left),
-// std::move(rhs));
-// });
-// }
+std::vector<Parser::stmt_or_err> Parser::parse() {}

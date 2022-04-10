@@ -1,4 +1,6 @@
-bin_dir="build"
+
+# RUN as `BIN_DIR=<dir> bash setup_build.sh <params>`
+bin_dir=${BIN_DIR:-"build"}
 
 if [ ! -d "$bin_dir" ]
 then

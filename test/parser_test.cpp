@@ -8,8 +8,8 @@
 #include <string>
 
 using namespace std::string_literals;
-#define PARSE(s) Parser(Lexer(s).scan_tokens()).parse()
-#define PARSE_AND_SEXP(s) PARSE(s).value()->to_string()
+#define PARSE(s) Parser(Lexer(s).scan_tokens()).parse_expr()
+#define PARSE_AND_SEXP(s) PARSE(s).value()->to_sexp()
 
 TEST_CASE("Pratt Parser Test") {
   REQUIRE(PARSE_AND_SEXP("1+2") == "(+ 1 2)");

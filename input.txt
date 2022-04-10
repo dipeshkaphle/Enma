@@ -1,3 +1,4 @@
+let z = "abc";
 data Position = {
 	x: int;
 	y: int;

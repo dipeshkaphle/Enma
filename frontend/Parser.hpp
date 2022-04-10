@@ -11,8 +11,7 @@ namespace expr {
 class Expr;
 }
 
-struct InfixParselet;
-struct PrefixParselet;
+class Stmt;
 
 class Parser {
 public:
@@ -21,9 +20,7 @@ public:
   };
 
   using expr_or_err = tl::expected<std::unique_ptr<expr::Expr>, parse_error>;
-  friend struct PrefixParselet;
-  friend struct InfixParselet;
-  friend struct GroupParselet;
+  using stmt_or_err = tl::expected<std::unique_ptr<Stmt>, parse_error>;
   // static std::unordered_map<TokenType, int> prefix_binding_power;
   // static std::unordered_map<TokenType, std::pair<int, int>>
   // infix_binding_power;
@@ -112,19 +109,22 @@ private:
 
   expr_or_err prefix_expression();
 
+  stmt_or_err statement();
+  stmt_or_err break_statement();
+  stmt_or_err continue_statement();
+  stmt_or_err expression_statement();
+  stmt_or_err print_statement(bool new_line);
+  stmt_or_err return_statement();
+  stmt_or_err declaration();
+  stmt_or_err fn_declaration(const std::string &type);
+  stmt_or_err let_declaration();
+  stmt_or_err if_statement();
+  stmt_or_err while_statement();
+  stmt_or_err for_statement();
+  tl::expected<std::vector<std::unique_ptr<Stmt>>, parse_error> block();
+
 public:
   explicit Parser(std::vector<Token> _toks);
-  expr_or_err parse();
-};
-struct PrefixParselet {
-  virtual Parser::expr_or_err parse(Parser &parser, Token &tok);
-};
-
-struct InfixParselet {
-  virtual Parser::expr_or_err parse(Parser &parser, Token &tok,
-                                    std::unique_ptr<expr::Expr> left);
-};
-
-struct GroupParselet : public PrefixParselet {
-  virtual Parser::expr_or_err parse(Parser &parser, Token &tok) override;
+  expr_or_err parse_expr();
+  std::vector<stmt_or_err> parse();
 };
