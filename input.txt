@@ -1,4 +1,5 @@
 let z : string = "abc";
+
 data Position = {
 	x: int;
 	y: int;

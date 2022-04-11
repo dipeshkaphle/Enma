@@ -3,6 +3,7 @@
 
 #include <fmt/format.h>
 #include <tl/to.hpp>
+#include <tl/zip_transform.hpp>
 
 #include <iterator>
 
@@ -14,13 +15,13 @@ BlockStmt::BlockStmt(BlockStmt &&stmt) noexcept
     : statements(std::move(stmt.statements)) {}
 string BlockStmt::to_sexp() const {
   return fmt::format(
-      "(Block [{}])",
+      "(Block [ {} ])",
       fmt::join(
 
           this->statements | std::views::transform([&](auto &stmt) {
             return stmt->to_sexp();
           }) | tl::to<std::vector<std::string>>(),
-          "\n"));
+          "; "));
 }
 
 BreakStmt::BreakStmt() = default;
@@ -34,12 +35,14 @@ DataDeclStmt::DataDeclStmt(Token struct_name, std::vector<Token> names,
     : struct_name(std::move(struct_name)), names(std::move(names)),
       types(std::move(types)) {}
 string DataDeclStmt::to_sexp() const {
-  return fmt::format(
-      "(DataDefn {} [{}])", this->struct_name.lexeme,
-      fmt::join(this->names | std::views::transform([&](const Token &tok) {
-                  return tok.lexeme;
-                }) | tl::to<std::vector<std::string>>(),
-                ","));
+  auto v = tl::views::zip_transform(
+      [&](const auto &name, const auto &type) {
+        return fmt::format("{}: {}", name.lexeme, type.lexeme);
+      },
+      this->names, this->types);
+
+  return fmt::format("(DataDefn {} [{}])", this->struct_name.lexeme,
+                     fmt::join(v | tl::to<std::vector<std::string>>(), ","));
 }
 
 ExprStmt::ExprStmt(std::unique_ptr<Expr> expr) : expr(std::move(expr)) {}
@@ -50,36 +53,60 @@ FnStmt::FnStmt(Token fn_name, std::vector<Token> params,
                std::vector<stmt_ptr> fn_body)
     : name(std::move(fn_name)), params(std::move(params)),
       param_types(std::move(param_types)), body(std::move(fn_body)) {}
-string FnStmt::to_sexp() const { return fmt::format("(Fn  def {} [{}] )", name.lexeme, fmt::join(param_types,", ")); }
+string FnStmt::to_sexp() const {
+  auto v = tl::views::zip_transform(
+      [&](const auto &name, const auto &type) {
+        return fmt::format("{}: {}", name.lexeme, type);
+      },
+      this->params, this->param_types);
+  return fmt::format(
+      "(Fn  def {} [{}] [ {} ] )", name.lexeme,
+      fmt::join(v | tl::to<std::vector<std::string>>(), ", "),
+      fmt::join(this->body | std::views::transform([](const auto &stmt) {
+                  return stmt->to_sexp();
+                }) | tl::to<std::vector<std::string>>(),
+                "; "));
+}
 
 IfStmt::IfStmt(std::unique_ptr<Expr> condition,
                std::unique_ptr<Stmt> then_branch,
                std::optional<std::unique_ptr<Stmt>> else_branch)
     : condition(std::move(condition)), then_branch(std::move(then_branch)),
       else_branch(std::move(else_branch)) {}
-string IfStmt::to_sexp() const { 
-                                return fmt::format("(If (cond {} then {} else {}))",
-                                condition->to_sexp(),
-                                then_branch->to_sexp(),
-                                else_branch.has_value()?else_branch.value()->to_sexp():std::string("{}")); 
-                              }
+string IfStmt::to_sexp() const {
+  return fmt::format("(If {} then {} else {}))", condition->to_sexp(),
+                     then_branch->to_sexp(),
+                     else_branch.has_value() ? else_branch.value()->to_sexp()
+                                             : std::string("{}"));
+}
 
 LetStmt::LetStmt(Token name, Token type, std::unique_ptr<Expr> expr)
     : name(std::move(name)), type(std::move(type)),
       initializer_expr(std::move(expr)) {}
-string LetStmt::to_sexp() const { return fmt::format("(Let ({} : {}) {})",name.lexeme,type.lexeme, initializer_expr->to_sexp()); }
+string LetStmt::to_sexp() const {
+  return fmt::format("(Let ({} : {}) {})", name.lexeme, type.lexeme,
+                     initializer_expr->to_sexp());
+}
 
 PrintStmt::PrintStmt(std::unique_ptr<Expr> expr, bool new_line)
     : expr(std::move(expr)), has_newline(new_line) {}
-string PrintStmt::to_sexp() const { return fmt::format("(Print {})",expr->to_sexp()); }
+string PrintStmt::to_sexp() const {
+  return fmt::format("(Print {})", expr->to_sexp());
+}
 
 ReturnStmt::ReturnStmt(Token keyword, std::optional<std::unique_ptr<Expr>> val)
     : keyword(std::move(keyword)), value(std::move(val)) {}
-string ReturnStmt::to_sexp() const { return fmt::format("(Return {})",value.has_value()?value.value()->to_sexp():std::string("")); }
+string ReturnStmt::to_sexp() const {
+  return fmt::format("(Return {})", value.has_value() ? value.value()->to_sexp()
+                                                      : std::string(""));
+}
 
 WhileStmt::WhileStmt(std::unique_ptr<Expr> condition,
                      std::unique_ptr<Stmt> body,
                      std::optional<std::unique_ptr<Stmt>> change_fn)
     : condition(std::move(condition)), body(std::move(body)),
       change_fn(std::move(change_fn)) {}
-[[nodiscard]] string WhileStmt::to_sexp() const { return fmt::format("(While cond {} do {})",condition->to_sexp(),body->to_sexp()); }
+[[nodiscard]] string WhileStmt::to_sexp() const {
+  return fmt::format("(While cond {} do {})", condition->to_sexp(),
+                     body->to_sexp());
+}
