@@ -1,5 +1,6 @@
-sudo docker build -t gcc-docker -f base.Dockerfile .
-sudo docker build -t enma-docker -f EnmaWithTest.Dockerfile .
+prefix=${PREFIX:-""}
+$prefix docker build -t gcc-docker -f base.Dockerfile .
+$prefix docker build -t enma-docker -f EnmaWithTest.Dockerfile .
 
 # cache_dir="ccache_dir"
 # if [ ! -d "$cache_dir" ]
