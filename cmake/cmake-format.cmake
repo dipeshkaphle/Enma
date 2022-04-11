@@ -4,7 +4,7 @@ find_program(
   DOC "Path to cmake-format executable")
 
 if(NOT CMAKE_FORMAT_EXE)
-  message(SEND_ERROR "cmake-format executable not found")
+  message(WARNING "cmake-format executable not found")
 else()
   message("** Found cmake-format")
   message("** cmake-format executable location: ${CMAKE_FORMAT_EXE}")
@@ -30,5 +30,4 @@ list(
   REGEX
   ${CMAKE_INSTALL_PREFIX}/*)
 
-add_custom_target(cmakeformat ALL COMMAND ${CMAKE_FORMAT_EXE} -i
-                                          ${ALL_CMAKE_FILES})
+add_custom_target(cmakeformat COMMAND ${CMAKE_FORMAT_EXE} -i ${ALL_CMAKE_FILES})

@@ -4,7 +4,7 @@ find_program(
   DOC "Path to clang-format executable")
 
 if(NOT CLANG_FORMAT_EXE)
-  message(SEND_ERROR "clang-format executable not found")
+  message(WARNING "clang-format executable not found")
 else()
   message("** Found clang-format")
   message("** clang-format executable location: ${CLANG_FORMAT_EXE}")
@@ -18,5 +18,5 @@ file(
   test/*.cpp
   test/*.hpp)
 
-add_custom_target(clangformat ALL COMMAND ${CLANG_FORMAT_EXE} -i -style=LLVM
-                                          ${ALL_SOURCE_FILES})
+add_custom_target(clangformat COMMAND ${CLANG_FORMAT_EXE} -i -style=LLVM
+                                      ${ALL_SOURCE_FILES})

@@ -14,7 +14,7 @@ const unordered_map<string, TokenType> Lexer::keywords = {
     {"else", tok::ELSE},
     {"false", tok::FALSE},
     {"true", tok::TRUE},
-    {"for", tok::FOR},
+    // {"for", tok::FOR},
     {"fn", tok::FN},
     {"if", tok::IF},
     {"nil", tok::NIL},
@@ -53,7 +53,7 @@ bool Lexer::match(char expected) {
   return true;
 }
 
-void Lexer::add_token(TokenType type, const Token::literal_type &literal) {
+void Lexer::add_token(TokenType type, const literal_type &literal) {
   string text = source.substr(start, cur - start);
   tokens.emplace_back(Token(type, text, literal, cur_line));
 }
@@ -165,12 +165,14 @@ void Lexer::get_number() {
    */
   string number = source.substr(start, (cur - 1) - start + 1);
   add_token(is_double ? TokenType::DOUBLE : TokenType::INT,
-            is_double ? Token::literal_type(std::stod(number))
-                      : Token::literal_type(std::stoll(number)));
+            is_double ? literal_type(std::stod(number))
+                      : literal_type(std::stoll(number)));
 }
 
 void Lexer::get_identifier() {
-  while ((isalpha(peek()) != 0) || (isdigit(peek()) != 0) || peek() == '_') {
+  //[a-zA-Z_][a-zA-Z0-9_']*
+  while ((isalpha(peek()) != 0) || (isdigit(peek()) != 0) || peek() == '_' ||
+         peek() == '\'') {
     advance();
   }
 
@@ -181,7 +183,7 @@ void Lexer::get_identifier() {
    *
    */
   string ident = source.substr(start, this->cur - this->start);
-  Token::literal_type lit = ident;
+  literal_type lit = ident;
   TokenType type = tok::IDENTIFIER;
   if (keywords.contains(ident)) {
     type = keywords.at(ident);

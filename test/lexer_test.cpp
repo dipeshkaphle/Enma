@@ -10,7 +10,7 @@
 TEST_CASE("Lexer") {
   std::string source = R"(
 data Position = {
-	x: int;
+	x': int; // x' is also identifier
 	y: int;
 };
 	)";
