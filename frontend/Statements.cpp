@@ -3,7 +3,7 @@
 
 #include <fmt/format.h>
 #include <tl/to.hpp>
-#include <tl/zip_transform.hpp>
+// #include <tl/zip_transform.hpp>
 
 #include <iterator>
 
@@ -16,12 +16,10 @@ BlockStmt::BlockStmt(BlockStmt &&stmt) noexcept
 string BlockStmt::to_sexp() const {
   return fmt::format(
       "(Block [ {} ])",
-      fmt::join(
-
-          this->statements | std::views::transform([&](auto &stmt) {
-            return stmt->to_sexp();
-          }) | tl::to<std::vector<std::string>>(),
-          "; "));
+      fmt::join(this->statements | std::views::transform([&](auto &stmt) {
+                  return stmt->to_sexp();
+                }) | tl::to<std::vector<std::string>>(),
+                "; "));
 }
 
 BreakStmt::BreakStmt() = default;
@@ -35,14 +33,21 @@ DataDeclStmt::DataDeclStmt(Token struct_name, std::vector<Token> names,
     : struct_name(std::move(struct_name)), names(std::move(names)),
       types(std::move(types)) {}
 string DataDeclStmt::to_sexp() const {
-  auto v = tl::views::zip_transform(
-      [&](const auto &name, const auto &type) {
-        return fmt::format("{}: {}", name.lexeme, type.lexeme);
-      },
-      this->names, this->types);
+  // auto v = tl::views::zip_transform(
+  // [&](const auto &name, const auto &type) {
+  // return fmt::format("{}: {}", name.lexeme, type.lexeme);
+  // },
+  // this->names, this->types);
+
+  std::vector<std::string> param_and_types;
+  std::transform(this->names.begin(), this->names.end(), this->types.begin(),
+                 std::back_inserter(param_and_types),
+                 [](const auto &name, const auto &type) {
+                   return fmt::format("{}: {}", name.lexeme, type.lexeme);
+                 });
 
   return fmt::format("(DataDefn {} [{}])", this->struct_name.lexeme,
-                     fmt::join(v | tl::to<std::vector<std::string>>(), ","));
+                     fmt::join(param_and_types, ","));
 }
 
 ExprStmt::ExprStmt(std::unique_ptr<Expr> expr) : expr(std::move(expr)) {}
@@ -54,14 +59,21 @@ FnStmt::FnStmt(Token fn_name, std::vector<Token> params,
     : name(std::move(fn_name)), params(std::move(params)),
       param_types(std::move(param_types)), body(std::move(fn_body)) {}
 string FnStmt::to_sexp() const {
-  auto v = tl::views::zip_transform(
-      [&](const auto &name, const auto &type) {
-        return fmt::format("{}: {}", name.lexeme, type);
-      },
-      this->params, this->param_types);
+  // auto v = tl::views::zip_transform(
+  // [&](const auto &name, const auto &type) {
+  // return fmt::format("{}: {}", name.lexeme, type);
+  // },
+  // this->params, this->param_types);
+
+  std::vector<std::string> param_and_types;
+  std::transform(this->params.begin(), this->params.end(),
+                 this->param_types.begin(), std::back_inserter(param_and_types),
+                 [](const auto &name, const auto &type) {
+                   return fmt::format("{}: {}", name.lexeme, type);
+                 });
   return fmt::format(
       "(Fn  def {} [{}] [ {} ] )", name.lexeme,
-      fmt::join(v | tl::to<std::vector<std::string>>(), ", "),
+      fmt::join(param_and_types, ", "),
       fmt::join(this->body | std::views::transform([](const auto &stmt) {
                   return stmt->to_sexp();
                 }) | tl::to<std::vector<std::string>>(),
