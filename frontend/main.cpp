@@ -19,7 +19,7 @@ void run(const string &source, [[maybe_unused]] bool is_repl = false) {
     return;
   }
 
-  // #ifdef DEBUG
+#ifdef DEBUG
   fmt::print("=======================================\n");
   fmt::print("All the Tokens\n");
   fmt::print("=======================================\n");
@@ -28,15 +28,15 @@ void run(const string &source, [[maybe_unused]] bool is_repl = false) {
                         [](auto &x) { fmt::print("{}\n", x.to_string()); });
   fmt::print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n");
   fmt::print("=======================================\n");
-  // #endif
+#endif
 
   Parser parser(tokens);
   auto stmnts = parser.parse();
+  if (Error::hadError) {
+    return;
+  }
   std::ranges::for_each(stmnts, [](auto &stmnt) {
-    if(stmnt.has_value())
-      fmt::print("{}\n\n",stmnt.value()->to_sexp());
-    else
-      throw stmnt.error();
+    fmt::print("{}\n\n", stmnt.value()->to_sexp());
   });
 }
 
