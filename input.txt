@@ -1,10 +1,10 @@
-let z = "abc";
+let z : string = "abc";
 data Position = {
 	x: int;
 	y: int;
-};
+}
 
-let x= 10;
+let x : int = 10;
 
 fn is_origin(pos: Position ){
 	if (pos.x == 0 and pos.y == 0 ){
@@ -18,8 +18,8 @@ fn is_origin(pos: Position ){
 //$$
 
 fn sum(n: int ){
-	let i= 0;
-	let sm = 0;
+	let i : int = 0;
+	let sm : int = 0;
 	while( i <= n){
 		sm = sm + i;
 		i =  i + 1;

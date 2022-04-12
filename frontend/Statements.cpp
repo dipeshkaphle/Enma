@@ -50,31 +50,36 @@ FnStmt::FnStmt(Token fn_name, std::vector<Token> params,
                std::vector<stmt_ptr> fn_body)
     : name(std::move(fn_name)), params(std::move(params)),
       param_types(std::move(param_types)), body(std::move(fn_body)) {}
-string FnStmt::to_sexp() const { return fmt::format(""); }
+string FnStmt::to_sexp() const { return fmt::format("(Fn  def {} [{}] )", name.lexeme, fmt::join(param_types,", ")); }
 
 IfStmt::IfStmt(std::unique_ptr<Expr> condition,
                std::unique_ptr<Stmt> then_branch,
                std::optional<std::unique_ptr<Stmt>> else_branch)
     : condition(std::move(condition)), then_branch(std::move(then_branch)),
       else_branch(std::move(else_branch)) {}
-string IfStmt::to_sexp() const { return fmt::format(""); }
+string IfStmt::to_sexp() const { 
+                                return fmt::format("(If (cond {} then {} else {}))",
+                                condition->to_sexp(),
+                                then_branch->to_sexp(),
+                                else_branch.has_value()?else_branch.value()->to_sexp():std::string("{}")); 
+                              }
 
 LetStmt::LetStmt(Token name, Token type, std::unique_ptr<Expr> expr)
     : name(std::move(name)), type(std::move(type)),
       initializer_expr(std::move(expr)) {}
-string LetStmt::to_sexp() const { return fmt::format(""); }
+string LetStmt::to_sexp() const { return fmt::format("(Let ({} : {}) {})",name.lexeme,type.lexeme, initializer_expr->to_sexp()); }
 
 PrintStmt::PrintStmt(std::unique_ptr<Expr> expr, bool new_line)
     : expr(std::move(expr)), has_newline(new_line) {}
-string PrintStmt::to_sexp() const { return fmt::format(""); }
+string PrintStmt::to_sexp() const { return fmt::format("(Print {})",expr->to_sexp()); }
 
 ReturnStmt::ReturnStmt(Token keyword, std::optional<std::unique_ptr<Expr>> val)
     : keyword(std::move(keyword)), value(std::move(val)) {}
-string ReturnStmt::to_sexp() const { return fmt::format(""); }
+string ReturnStmt::to_sexp() const { return fmt::format("(Return {})",value.has_value()?value.value()->to_sexp():std::string("")); }
 
 WhileStmt::WhileStmt(std::unique_ptr<Expr> condition,
                      std::unique_ptr<Stmt> body,
                      std::optional<std::unique_ptr<Stmt>> change_fn)
     : condition(std::move(condition)), body(std::move(body)),
       change_fn(std::move(change_fn)) {}
-[[nodiscard]] string WhileStmt::to_sexp() const { return fmt::format(""); }
+[[nodiscard]] string WhileStmt::to_sexp() const { return fmt::format("(While cond {} do {})",condition->to_sexp(),body->to_sexp()); }

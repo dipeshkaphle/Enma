@@ -1,5 +1,7 @@
 #include "Error.hpp"
 #include "Lexer.hpp"
+#include "Parser.hpp"
+#include "Statements.hpp"
 
 #include <fmt/core.h>
 #include <fmt/ostream.h>
@@ -27,6 +29,15 @@ void run(const string &source, [[maybe_unused]] bool is_repl = false) {
   fmt::print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n");
   fmt::print("=======================================\n");
   // #endif
+
+  Parser parser(tokens);
+  auto stmnts = parser.parse();
+  std::ranges::for_each(stmnts, [](auto &stmnt) {
+    if(stmnt.has_value())
+      fmt::print("{}\n\n",stmnt.value()->to_sexp());
+    else
+      throw stmnt.error();
+  });
 }
 
 void runFile(const char *filename) {

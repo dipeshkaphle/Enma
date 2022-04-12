@@ -1,5 +1,5 @@
-docker build -t gcc-docker -f base.Dockerfile .
-docker build -t enma-docker -f EnmaWithTest.Dockerfile .
+sudo docker build -t gcc-docker -f base.Dockerfile .
+sudo docker build -t enma-docker -f EnmaWithTest.Dockerfile .
 
 # cache_dir="ccache_dir"
 # if [ ! -d "$cache_dir" ]

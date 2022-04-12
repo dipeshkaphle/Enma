@@ -1,1 +1,1 @@
-docker run -v $(pwd):/Enma -it enma-docker 
+sudo docker run -v $(pwd):/Enma -it enma-docker 

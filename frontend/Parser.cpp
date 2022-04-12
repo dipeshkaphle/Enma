@@ -479,6 +479,8 @@ Parser::stmt_or_err Parser::data_definition() {
                                   [&](auto &&type)
                                       -> tl::expected<std::pair<Token, Token>,
                                                       parse_error> {
+                                    auto semicolon = consume(TokenType::SEMICOLON, "Expected Semicolon After Type");
+                                    RETURN_IF_ERR(semicolon);
                                     return std::pair<Token, Token>{name, type};
                                   });
                         });
@@ -489,6 +491,8 @@ Parser::stmt_or_err Parser::data_definition() {
           names.push_back(name);
           types.push_back(type);
         }
+        auto RIGHT_BRACE = consume(TokenType::RIGHT_BRACE, "Right Brace Expected7");
+        RETURN_IF_ERR(RIGHT_BRACE);
         return std::make_unique<DataDeclStmt>(struct_name, names, types);
       });
 }
