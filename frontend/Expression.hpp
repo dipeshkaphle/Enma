@@ -8,7 +8,11 @@
 namespace expr {
 using literal_type = literal_type;
 
-class Expr {
+template <typename T> class ExprVisitor {
+  //
+};
+
+class Expr : public ExprVisitor<visit_type> {
 public:
   virtual ~Expr();
   [[nodiscard]] virtual string to_sexp() const = 0;

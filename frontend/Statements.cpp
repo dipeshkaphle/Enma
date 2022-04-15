@@ -54,10 +54,11 @@ ExprStmt::ExprStmt(std::unique_ptr<Expr> expr) : expr(std::move(expr)) {}
 string ExprStmt::to_sexp() const { return fmt::format("{}", expr->to_sexp()); }
 
 FnStmt::FnStmt(Token fn_name, std::vector<Token> params,
-               std::vector<std::string> param_types,
+               std::vector<std::string> param_types, std::string return_type,
                std::vector<stmt_ptr> fn_body)
     : name(std::move(fn_name)), params(std::move(params)),
-      param_types(std::move(param_types)), body(std::move(fn_body)) {}
+      param_types(std::move(param_types)), return_type(std::move(return_type)),
+      body(std::move(fn_body)) {}
 string FnStmt::to_sexp() const {
   // auto v = tl::views::zip_transform(
   // [&](const auto &name, const auto &type) {
@@ -72,8 +73,8 @@ string FnStmt::to_sexp() const {
                    return fmt::format("{}: {}", name.lexeme, type);
                  });
   return fmt::format(
-      "(Fn  def {} [{}] [ {} ] )", name.lexeme,
-      fmt::join(param_and_types, ", "),
+      "(Fn {} [{}] returns {} [ {} ] )", name.lexeme,
+      fmt::join(param_and_types, ", "), return_type,
       fmt::join(this->body | std::views::transform([](const auto &stmt) {
                   return stmt->to_sexp();
                 }) | tl::to<std::vector<std::string>>(),
@@ -92,11 +93,13 @@ string IfStmt::to_sexp() const {
                                              : std::string("{}"));
 }
 
-LetStmt::LetStmt(Token name, Token type, std::unique_ptr<Expr> expr)
+LetStmt::LetStmt(Token name, std::optional<Token> type,
+                 std::unique_ptr<Expr> expr)
     : name(std::move(name)), type(std::move(type)),
       initializer_expr(std::move(expr)) {}
 string LetStmt::to_sexp() const {
-  return fmt::format("(Let ({} : {}) {})", name.lexeme, type.lexeme,
+  return fmt::format("(Let {}{} {})", name.lexeme,
+                     type.has_value() ? ":" + type.value().lexeme : "",
                      initializer_expr->to_sexp());
 }
 

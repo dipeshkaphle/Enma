@@ -1,4 +1,4 @@
-let z : string = "abc";
+let z = "abc";
 
 data Position = {
 	x: int;
@@ -8,17 +8,19 @@ data Position = {
 let x : int = 10;
 
 fn is_origin(pos: Position ){
+	let x = true;
 	if (pos.x == 0 and pos.y == 0 ){
-		true;
+		x= true;
 	}else{
-		!true;
+		x= !true;
 	}
+	x;
 }
 
 // This is error
 //$$
 
-fn sum(n: int ){
+fn sum(n: int ): int  {
 	let i : int = 0;
 	let sm : int = 0;
 	while( i <= n){

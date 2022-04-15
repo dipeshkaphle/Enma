@@ -9,7 +9,11 @@
 
 using Expr = expr::Expr;
 
-class Stmt {
+template <typename T> class StmtVisitor {
+  //
+};
+
+class Stmt : public StmtVisitor<visit_type> {
 public:
   virtual ~Stmt();
   [[nodiscard]] virtual string to_sexp() const = 0;
@@ -52,11 +56,13 @@ struct FnStmt : public Stmt {
   Token name;
   std::vector<Token> params;
   std::vector<std::string> param_types;
+  std::string return_type;
   // can't store a block because of the possibility of early returns
   std::vector<stmt_ptr> body;
 
   FnStmt(Token fn_name, std::vector<Token> params,
-         std::vector<std::string> param_types, std::vector<stmt_ptr> fn_body);
+         std::vector<std::string> param_types, std::string return_type,
+         std::vector<stmt_ptr> fn_body);
   [[nodiscard]] string to_sexp() const override;
 };
 struct IfStmt : public Stmt {
@@ -70,9 +76,9 @@ struct IfStmt : public Stmt {
 };
 struct LetStmt : public Stmt {
   Token name;
-  Token type;
+  std::optional<Token> type;
   std::unique_ptr<Expr> initializer_expr;
-  LetStmt(Token name, Token type, std::unique_ptr<Expr> expr);
+  LetStmt(Token name, std::optional<Token> type, std::unique_ptr<Expr> expr);
   [[nodiscard]] string to_sexp() const override;
 };
 struct PrintStmt : public Stmt {

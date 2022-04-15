@@ -13,3 +13,6 @@ using literal_type =
     std::variant<std::monostate, int64_t, double, bool, char, std::string>;
 
 std::string literal_to_string(const literal_type &lit);
+
+using visit_type =
+    std::variant<std::monostate, int64_t, double, bool, char, std::string>;

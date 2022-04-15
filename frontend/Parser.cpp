@@ -357,6 +357,14 @@ Parser::stmt_or_err Parser::fn_declaration(const std::string &type) {
 
   auto [parameters, types] = std::move(inside_parens.value());
 
+  std::string ret_type = "void";
+  if (match({TokenType::COLON})) {
+    auto maybe_ret_type =
+        consume(TokenType::IDENTIFIER, "Expected Return Type after colon");
+    RETURN_IF_ERR(maybe_ret_type);
+    ret_type = maybe_ret_type.value().lexeme;
+  }
+
   auto body =
       consume(TokenType::LEFT_BRACE,
               fmt::format("Expect {} before {} body", '{', type).c_str())
@@ -371,7 +379,7 @@ Parser::stmt_or_err Parser::fn_declaration(const std::string &type) {
       tl::to<std::vector<std::string>>();
 
   return std::make_unique<FnStmt>(maybe_name.value(), parameters, types_strings,
-                                  std::move(body.value()));
+                                  ret_type, std::move(body.value()));
 }
 Parser::stmt_or_err Parser::let_declaration() {
   /*
@@ -383,15 +391,18 @@ Parser::stmt_or_err Parser::let_declaration() {
                           "Expected identifier after let declaration");
   RETURN_IF_ERR((maybe_id));
 
-  auto maybe_colon =
-      consume(TokenType::COLON, "Expected colon after identifier");
+  std::optional<Token> type{};
 
-  RETURN_IF_ERR(maybe_colon);
+  if (match({TokenType::COLON})) {
+    auto maybe_type =
+        consume(TokenType::IDENTIFIER, "Expected Type in let declartion");
+    RETURN_IF_ERR(maybe_type);
+    type = std::move(maybe_type.value());
+  }
+  // auto maybe_colon =
+  // consume(TokenType::COLON, "Expected colon after identifier");
 
-  auto maybe_type =
-      consume(TokenType::IDENTIFIER, "Expected Type in let declartion");
-
-  RETURN_IF_ERR(maybe_type);
+  // RETURN_IF_ERR(maybe_colon);
 
   auto maybe_equal_to = consume(
       TokenType::EQUAL,
@@ -404,7 +415,7 @@ Parser::stmt_or_err Parser::let_declaration() {
   auto maybe_semicolon = consume(TokenType::SEMICOLON,
                                  "Expected ; after the end of let declaration");
   RETURN_IF_ERR(maybe_semicolon);
-  return std::make_unique<LetStmt>(maybe_id.value(), maybe_type.value(),
+  return std::make_unique<LetStmt>(maybe_id.value(), type,
                                    std::move(initializer_expr.value()));
 }
 Parser::stmt_or_err Parser::if_statement() {
@@ -479,7 +490,9 @@ Parser::stmt_or_err Parser::data_definition() {
                                   [&](auto &&type)
                                       -> tl::expected<std::pair<Token, Token>,
                                                       parse_error> {
-                                    auto semicolon = consume(TokenType::SEMICOLON, "Expected Semicolon After Type");
+                                    auto semicolon = consume(
+                                        TokenType::SEMICOLON,
+                                        "Expected Semicolon After Type");
                                     RETURN_IF_ERR(semicolon);
                                     return std::pair<Token, Token>{name, type};
                                   });
@@ -491,7 +504,8 @@ Parser::stmt_or_err Parser::data_definition() {
           names.push_back(name);
           types.push_back(type);
         }
-        auto RIGHT_BRACE = consume(TokenType::RIGHT_BRACE, "Right Brace Expected7");
+        auto RIGHT_BRACE =
+            consume(TokenType::RIGHT_BRACE, "Right Brace Expected7");
         RETURN_IF_ERR(RIGHT_BRACE);
         return std::make_unique<DataDeclStmt>(struct_name, names, types);
       });
