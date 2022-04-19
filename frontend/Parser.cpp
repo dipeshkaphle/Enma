@@ -137,6 +137,14 @@ expr_or_err Parser::expression(int binding_power) {
               tl::unexpected<parse_error>(parse_error(
                   "Something is wrong in the parser if you see this as error"));
           if (op.type == TokenType::LEFT_PAREN) {
+
+            // TODO: Lambda expressions
+            // Callee should be a variable or a lambda(not implemented yet)
+            if (auto *fn_name = dynamic_cast<VarExpr *>(lhs.get());
+                fn_name == nullptr) {
+              return tl::make_unexpected<parse_error>(this->error(
+                  peek(), "Must have a variable or lambda in call expression"));
+            }
             // CALL EXPR
             maybe_final_expr = finish_call(std::move(lhs));
           } else if (op.type == TokenType::IF) {
@@ -539,6 +547,19 @@ std::vector<Parser::stmt_or_err> Parser::parse() {
     if (!stmt.has_value()) {
       this->synchronize();
     }
+    // if (auto *fn = dynamic_cast<FnStmt *>(stmt->get()); fn != nullptr) {
+    // add_to_symtable("__global__", symbol(fn));
+    // }
+    // if (auto *exp = dynamic_cast<ExprStmt *>(stmt->get()); exp != nullptr) {
+    // if (auto *assign_expr = dynamic_cast<expr::AssignExpr
+    // *>(exp->expr.get()); assign_expr != nullptr) {
+    // add_to_symtable("__global__", symbol(assign_expr));
+    // }
+    // if (auto *var_expr = dynamic_cast<expr::VarExpr *>(exp->expr.get());
+    // var_expr != nullptr) {
+    // add_to_symtable("__global__", symbol(var_expr));
+    // }
+    // }
     maybe_statements.emplace_back(std::move(stmt));
   }
   return maybe_statements;

@@ -1,12 +1,16 @@
 #include "Error.hpp"
 #include "Lexer.hpp"
 #include "Parser.hpp"
+#include "SemanticCheck.hpp"
 #include "Statements.hpp"
 
+#include <cstdlib>
+#include <deque>
 #include <fmt/core.h>
 #include <fmt/ostream.h>
 #include <fstream>
 #include <iostream>
+#include <iterator>
 
 using std::string;
 using std::string_view;
@@ -38,6 +42,23 @@ void run(const string &source, [[maybe_unused]] bool is_repl = false) {
   std::ranges::for_each(stmnts, [](auto &stmnt) {
     fmt::print("{}\n\n", stmnt.value()->to_sexp());
   });
+
+  std::deque<stmt_ptr> stmts_without_err;
+
+  std::transform(std::make_move_iterator(stmnts.begin()),
+                 std::make_move_iterator(stmnts.end()),
+                 std::back_inserter(stmts_without_err),
+                 [&](auto &&maybe_stmt) -> stmt_ptr {
+                   return std::move(maybe_stmt.value());
+                 });
+
+  SemanticChecker checker(
+      std::vector<stmt_ptr>(std::make_move_iterator(stmts_without_err.begin()),
+                            std::make_move_iterator(stmts_without_err.end())));
+  auto errs = checker.undeclared_symbols_check();
+  for (auto &err : errs) {
+    fmt::print(std::cerr, "{}\n", err.what());
+  }
 }
 
 void runFile(const char *filename) {
@@ -81,6 +102,8 @@ void runPrompt() {
 
 int main(int argc, char **argv) {
 
+  // system("pwd");
+  // runFile("../../examples/input.enma");
   if (argc > 2) {
     fmt::print("Usage: enma-frontend [script]");
     exit(255);
