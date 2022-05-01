@@ -33,6 +33,15 @@ struct PrefixExpr : public Expr {
   [[nodiscard]] string to_sexp() const override;
 };
 
+struct AttrAccessExpr : public Expr {
+  Token op;
+  std::unique_ptr<Expr> left;
+  std::unique_ptr<Expr> right;
+  AttrAccessExpr(Token op, std::unique_ptr<Expr> left,
+                 std::unique_ptr<Expr> right);
+  [[nodiscard]] string to_sexp() const override;
+};
+
 struct VarExpr : public Expr {
   Token name;
   VarExpr(Token name);

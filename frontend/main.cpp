@@ -55,7 +55,7 @@ void run(const string &source, [[maybe_unused]] bool is_repl = false) {
   SemanticChecker checker(
       std::vector<stmt_ptr>(std::make_move_iterator(stmts_without_err.begin()),
                             std::make_move_iterator(stmts_without_err.end())));
-  auto errs = checker.undeclared_symbols_check();
+  auto errs = checker.infer_type_type_check_and_undeclared_symbols_check();
   for (auto &err : errs) {
     fmt::print(std::cerr, "{}\n", err.what());
   }

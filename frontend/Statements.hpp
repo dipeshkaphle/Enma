@@ -55,13 +55,13 @@ struct ExprStmt : public Stmt {
 struct FnStmt : public Stmt {
   Token name;
   std::vector<Token> params;
-  std::vector<std::string> param_types;
-  std::string return_type;
+  std::vector<type_t> param_types;
+  type_t return_type;
   // can't store a block because of the possibility of early returns
   std::vector<stmt_ptr> body;
 
   FnStmt(Token fn_name, std::vector<Token> params,
-         std::vector<std::string> param_types, std::string return_type,
+         std::vector<type_t> param_types, type_t return_type,
          std::vector<stmt_ptr> fn_body);
   [[nodiscard]] string to_sexp() const override;
 };

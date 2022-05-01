@@ -26,6 +26,13 @@ string PrefixExpr::to_sexp() const {
   return fmt::format("({} {})", op.lexeme, this->right->to_sexp());
 }
 
+AttrAccessExpr::AttrAccessExpr(Token op, std::unique_ptr<Expr> left,
+                               std::unique_ptr<Expr> right)
+    : op(op), left(std::move(left)), right(std::move(right)) {}
+string AttrAccessExpr::to_sexp() const {
+  return fmt::format("(. {} {})", left->to_sexp(), right->to_sexp());
+}
+
 VarExpr::VarExpr(Token name) : name(std::move(name)) {}
 
 string VarExpr::to_sexp() const { return fmt::format("{}", this->name.lexeme); }

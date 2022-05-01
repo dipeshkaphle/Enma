@@ -175,6 +175,10 @@ expr_or_err Parser::expression(int binding_power) {
             }
             maybe_final_expr = expression(rbp).and_then(
                 [&](std::unique_ptr<Expr> &&rhs) -> expr_or_err {
+                  if (op.type == TokenType::DOT) {
+                    return std::make_unique<AttrAccessExpr>(
+                        std::move(op), std::move(lhs), std::move(rhs));
+                  }
                   return std::make_unique<BinaryExpr>(
                       std::move(op), std::move(lhs), std::move(rhs));
                 });
@@ -191,7 +195,6 @@ expr_or_err Parser::expression(int binding_power) {
 }
 
 expr_or_err Parser::prefix_expression() {
-
   if (any_of_at_peek(Parser::operators_tokens)) {
     if (prefix_binding_power.contains(peek().type)) {
       Token op = advance();
@@ -272,9 +275,9 @@ Parser::stmt_or_err Parser::continue_statement() {
     RETURN_IF_ERR(consume(TokenType::SEMICOLON, "Expected ; after a 'break'"));
     return std::make_unique<ContinueStmt>();
   }
-  return tl::make_unexpected<parse_error>(this->error(
-      this->peek(),
-      "Continue statement is not inside any form of loop. This is not valid"));
+  return tl::make_unexpected<parse_error>(
+      this->error(this->peek(), "Continue statement is not inside any form "
+                                "of loop. This is not valid"));
 }
 Parser::stmt_or_err Parser::expression_statement() {
   auto expr = this->expression().and_then([&](auto &&exp) -> expr_or_err {
@@ -288,7 +291,6 @@ Parser::stmt_or_err Parser::expression_statement() {
   });
 }
 Parser::stmt_or_err Parser::print_statement(bool new_line) {
-
   auto expr = this->expression().and_then([&](auto &&exp) -> expr_or_err {
     return consume(TokenType::SEMICOLON, "Expect ; after expression")
         .and_then([&](auto &&) -> expr_or_err {
@@ -550,8 +552,8 @@ std::vector<Parser::stmt_or_err> Parser::parse() {
     // if (auto *fn = dynamic_cast<FnStmt *>(stmt->get()); fn != nullptr) {
     // add_to_symtable("__global__", symbol(fn));
     // }
-    // if (auto *exp = dynamic_cast<ExprStmt *>(stmt->get()); exp != nullptr) {
-    // if (auto *assign_expr = dynamic_cast<expr::AssignExpr
+    // if (auto *exp = dynamic_cast<ExprStmt *>(stmt->get()); exp != nullptr)
+    // { if (auto *assign_expr = dynamic_cast<expr::AssignExpr
     // *>(exp->expr.get()); assign_expr != nullptr) {
     // add_to_symtable("__global__", symbol(assign_expr));
     // }

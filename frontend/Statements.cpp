@@ -54,7 +54,7 @@ ExprStmt::ExprStmt(std::unique_ptr<Expr> expr) : expr(std::move(expr)) {}
 string ExprStmt::to_sexp() const { return fmt::format("{}", expr->to_sexp()); }
 
 FnStmt::FnStmt(Token fn_name, std::vector<Token> params,
-               std::vector<std::string> param_types, std::string return_type,
+               std::vector<type_t> param_types, type_t return_type,
                std::vector<stmt_ptr> fn_body)
     : name(std::move(fn_name)), params(std::move(params)),
       param_types(std::move(param_types)), return_type(std::move(return_type)),
