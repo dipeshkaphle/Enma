@@ -9,6 +9,14 @@
 
 using namespace expr;
 
+std::string literal_as_literal_string(const literal_type &lit) {
+  return std::visit(
+      overloaded{[](const std::string &x) { return fmt::format("\"{}\"", x); },
+                 [](const char x) { return fmt::format("\'{}\'", x); },
+                 [](const auto &x) { return literal_to_string(x); }},
+      lit);
+}
+
 Expr::~Expr() = default;
 
 BinaryExpr::BinaryExpr(Token op, std::unique_ptr<Expr> left,
@@ -18,12 +26,35 @@ string BinaryExpr::to_sexp() const {
   return fmt::format("({} {} {})", op.lexeme, left->to_sexp(),
                      right->to_sexp());
 }
+std::vector<std::string> BinaryExpr::gen_intermediate() {
+  vector<std::string> instrs;
+  auto lhs = this->left->gen_intermediate();
+  auto rhs = this->right->gen_intermediate();
+  // instrs.emplace_back("// Codegen for lhs");
+  instrs.insert(instrs.end(), begin(lhs), end(lhs));
+  // instrs.emplace_back("// Codegen for rhs");
+  instrs.insert(instrs.end(), begin(rhs), end(rhs));
+  instrs.emplace_back(
+      fmt::format("  Op {}  // Pops top 2, performs op and pushes result",
+                  this->op.lexeme));
+  return instrs;
+}
 
 PrefixExpr::PrefixExpr(Token op, std::unique_ptr<Expr> right)
     : op(std::move(op)), right(std::move(right)) {}
 
 string PrefixExpr::to_sexp() const {
   return fmt::format("({} {})", op.lexeme, this->right->to_sexp());
+}
+std::vector<std::string> PrefixExpr::gen_intermediate() {
+  auto rhs = this->right->gen_intermediate();
+  vector<std::string> instrs;
+  // instrs.emplace_back("// Pushing the operand to stack");
+  instrs.insert(instrs.end(), begin(rhs), end(rhs));
+  instrs.emplace_back(fmt::format(
+      "  PrefixOp {}  //Pops one from stack, does op and pushes it back",
+      this->op.lexeme));
+  return instrs;
 }
 
 AttrAccessExpr::AttrAccessExpr(Token op, std::unique_ptr<Expr> left,
@@ -32,15 +63,24 @@ AttrAccessExpr::AttrAccessExpr(Token op, std::unique_ptr<Expr> left,
 string AttrAccessExpr::to_sexp() const {
   return fmt::format("(. {} {})", left->to_sexp(), right->to_sexp());
 }
+std::vector<std::string> AttrAccessExpr::gen_intermediate() { return {}; }
 
 VarExpr::VarExpr(Token name) : name(std::move(name)) {}
 
 string VarExpr::to_sexp() const { return fmt::format("{}", this->name.lexeme); }
+std::vector<std::string> VarExpr::gen_intermediate() {
+  return {fmt::format("  Push {}  //Push variable", this->name.lexeme)};
+}
 
 LiteralExpr::LiteralExpr(literal_type val) : value(std::move(val)) {}
 
 string LiteralExpr::to_sexp() const {
   return fmt::format("{}", literal_to_string(this->value));
+}
+std::vector<std::string> LiteralExpr::gen_intermediate() {
+
+  return {fmt::format("  PushI {} //Push intermediate",
+                      literal_as_literal_string(this->value))};
 }
 
 CallExpr::CallExpr(std::unique_ptr<Expr> callee, Token paren,
@@ -54,11 +94,35 @@ string CallExpr::to_sexp() const {
                                }) | tl::to<std::vector<std::string>>(),
                                ", "));
 }
+std::vector<std::string> CallExpr::gen_intermediate() {
+  vector<std::string> instrs;
+  // instrs.emplace_back("// Filling up parameters in stack");
+  for (auto &s : this->arguments) {
+    auto tmp = s->gen_intermediate();
+    instrs.insert(instrs.end(), tmp.begin(), tmp.end());
+  }
+  // instrs.emplace_back("//Calling function");
+  if (auto *var = dynamic_cast<VarExpr *>(this->callee.get()); var != nullptr) {
+    instrs.emplace_back(fmt::format("  Call {}", var->name.lexeme));
+  } else {
+    instrs.emplace_back(fmt::format("  Call <lambda>"));
+  }
+  return instrs;
+}
 
 AssignExpr::AssignExpr(Token name, std::unique_ptr<Expr> val)
     : name(std::move(name)), value(std::move(val)) {}
 string AssignExpr::to_sexp() const {
   return fmt::format("(= {} {})", name.lexeme, value->to_sexp());
+}
+std::vector<std::string> AssignExpr::gen_intermediate() {
+  vector<std::string> instrs;
+  // instrs.emplace_back("// Pushing the value to stack");
+  auto tmp = this->value->gen_intermediate();
+  instrs.insert(instrs.end(), tmp.begin(), tmp.end());
+  // instrs.emplace_back("// Load to the variable");
+  instrs.push_back(fmt::format("  Load {}", this->name.lexeme));
+  return instrs;
 }
 
 ConditionalExpr::ConditionalExpr(std::unique_ptr<Expr> cond,
@@ -70,4 +134,19 @@ ConditionalExpr::ConditionalExpr(std::unique_ptr<Expr> cond,
 string ConditionalExpr::to_sexp() const {
   return fmt::format("(if {} {} {})", cond->to_sexp(), then_expr->to_sexp(),
                      else_expr->to_sexp());
+}
+std::vector<std::string> ConditionalExpr::gen_intermediate() {
+  vector<std::string> instrs;
+  // instrs.emplace_back("// Push the condition to stack");
+  auto cond_code = cond->gen_intermediate();
+  instrs.insert(instrs.end(), cond_code.begin(), cond_code.end());
+  // instrs.emplace_back("// Push Then Branch to stack");
+  auto then_code = this->then_expr->gen_intermediate();
+  instrs.insert(instrs.end(), then_code.begin(), then_code.end());
+  // instrs.emplace_back("// Push Else Branch to stack");
+  auto else_code = this->else_expr->gen_intermediate();
+  instrs.insert(instrs.end(), else_code.begin(), else_code.end());
+  instrs.emplace_back("  IF // Pops 3 things from stack, checks cond and "
+                      "pushes one of the branches based on cond");
+  return instrs;
 }

@@ -1,21 +1,22 @@
 let z = "abc";
 
-let x : double = 10;
+let x = 10;
 
 fn is_origin(x: int, y: int){
 	let ans = true;
-	if (xy == 0 and yz == 0 ){
+	if (x == 0 and y == 0 ){
 		ans= true;
 	}else{
 		ans= !true;
 	}
-	ans;
+	return ans;
 }
 
 
 /* THis is sum function
 It sums from 0 to n inclusive
 */
+
 fn sum(n: int ): int  {
 	let i : int = 0;
 	let sm : int = 0;
@@ -23,6 +24,16 @@ fn sum(n: int ): int  {
 		sm = sm + i;
 		i =  i + 1;
 	}
-	sm;
+	/* 
+	I want it to be able to return even if we just have
+
+	```
+	sm
+	```
+
+	without the return in front of it. Like in rust. Not supported 
+	as of now though.
+	*/
+	return sm;
 }
 

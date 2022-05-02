@@ -16,6 +16,7 @@ class Expr : public ExprVisitor<visit_type> {
 public:
   virtual ~Expr();
   [[nodiscard]] virtual string to_sexp() const = 0;
+  [[nodiscard]] virtual std::vector<std::string> gen_intermediate() = 0;
 };
 
 struct BinaryExpr : public Expr {
@@ -24,6 +25,7 @@ struct BinaryExpr : public Expr {
   std::unique_ptr<Expr> right;
   BinaryExpr(Token op, std::unique_ptr<Expr> left, std::unique_ptr<Expr> right);
   [[nodiscard]] string to_sexp() const override;
+  std::vector<std::string> gen_intermediate() override;
 };
 
 struct PrefixExpr : public Expr {
@@ -31,6 +33,7 @@ struct PrefixExpr : public Expr {
   std::unique_ptr<Expr> right;
   PrefixExpr(Token op, std::unique_ptr<Expr> right);
   [[nodiscard]] string to_sexp() const override;
+  std::vector<std::string> gen_intermediate() override;
 };
 
 struct AttrAccessExpr : public Expr {
@@ -40,6 +43,7 @@ struct AttrAccessExpr : public Expr {
   AttrAccessExpr(Token op, std::unique_ptr<Expr> left,
                  std::unique_ptr<Expr> right);
   [[nodiscard]] string to_sexp() const override;
+  std::vector<std::string> gen_intermediate() override;
 };
 
 struct VarExpr : public Expr {
@@ -47,6 +51,7 @@ struct VarExpr : public Expr {
   VarExpr(Token name);
 
   [[nodiscard]] string to_sexp() const override;
+  std::vector<std::string> gen_intermediate() override;
 };
 
 struct LiteralExpr : public Expr {
@@ -55,6 +60,7 @@ struct LiteralExpr : public Expr {
   LiteralExpr(literal_type val);
 
   [[nodiscard]] string to_sexp() const override;
+  std::vector<std::string> gen_intermediate() override;
 };
 
 struct CallExpr : public Expr {
@@ -64,6 +70,7 @@ struct CallExpr : public Expr {
   CallExpr(std::unique_ptr<Expr> callee, Token paren,
            std::vector<std::unique_ptr<Expr>> args);
   [[nodiscard]] string to_sexp() const override;
+  std::vector<std::string> gen_intermediate() override;
 };
 
 struct AssignExpr : public Expr {
@@ -71,6 +78,7 @@ struct AssignExpr : public Expr {
   std::unique_ptr<Expr> value;
   AssignExpr(Token name, std::unique_ptr<Expr> val);
   [[nodiscard]] string to_sexp() const override;
+  std::vector<std::string> gen_intermediate() override;
 };
 
 struct ConditionalExpr : public Expr {
@@ -81,6 +89,7 @@ struct ConditionalExpr : public Expr {
                   std::unique_ptr<Expr> else_expr);
 
   [[nodiscard]] string to_sexp() const override;
+  std::vector<std::string> gen_intermediate() override;
 };
 
 } // namespace expr

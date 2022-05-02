@@ -39,6 +39,10 @@ void run(const string &source, [[maybe_unused]] bool is_repl = false) {
   if (Error::hadError) {
     return;
   }
+
+  fmt::print("=======================================\n");
+  fmt::print("S-Expression\n");
+  fmt::print("=======================================\n");
   std::ranges::for_each(stmnts, [](auto &stmnt) {
     fmt::print("{}\n\n", stmnt.value()->to_sexp());
   });
@@ -56,9 +60,25 @@ void run(const string &source, [[maybe_unused]] bool is_repl = false) {
       std::vector<stmt_ptr>(std::make_move_iterator(stmts_without_err.begin()),
                             std::make_move_iterator(stmts_without_err.end())));
   auto errs = checker.infer_type_type_check_and_undeclared_symbols_check();
+  bool has_error = false;
   for (auto &err : errs) {
     fmt::print(std::cerr, "{}\n", err.what());
+    has_error = true;
   }
+  if (has_error) {
+    return;
+  }
+  auto all_statements = std::move(checker.stmts);
+  std::vector<std::string> instrs;
+  for (auto &stmt : all_statements) {
+    auto tmp = stmt->gen_intermediate();
+    instrs.insert(instrs.end(), tmp.begin(), tmp.end());
+  }
+  fmt::print("=======================================\n");
+  fmt::print("Intermediate Code\n");
+  fmt::print("=======================================\n");
+  for (auto &s : instrs)
+    fmt::print("{}\n", s);
 }
 
 void runFile(const char *filename) {
@@ -103,7 +123,7 @@ void runPrompt() {
 int main(int argc, char **argv) {
 
   // system("pwd");
-  // runFile("../../examples/input.enma");
+  // runFile("../../examples/continue_and_break.enma");
   if (argc > 2) {
     fmt::print("Usage: enma-frontend [script]");
     exit(255);
