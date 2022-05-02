@@ -1,0 +1,5 @@
+let x : string ="abc";
+let y : int = 10;
+
+print x + y;
+

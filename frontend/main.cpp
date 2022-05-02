@@ -61,7 +61,13 @@ void run(const string &source, [[maybe_unused]] bool is_repl = false) {
                             std::make_move_iterator(stmts_without_err.end())));
   auto errs = checker.infer_type_type_check_and_undeclared_symbols_check();
   bool has_error = false;
+
   for (auto &err : errs) {
+    if (!has_error) {
+      fmt::print("=======================================\n");
+      fmt::print("Semantic Errors \n");
+      fmt::print("=======================================\n");
+    }
     fmt::print(std::cerr, "{}\n", err.what());
     has_error = true;
   }

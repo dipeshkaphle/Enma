@@ -1,0 +1,4 @@
+while(){ // missing condition inside parens, will be detected
+	let x = 0;
+	println x;
+}

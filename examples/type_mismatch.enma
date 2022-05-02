@@ -1,0 +1,5 @@
+let x : string =10;
+let y : int = 10;
+
+print x + y;
+

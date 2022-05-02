@@ -314,6 +314,17 @@ SemanticChecker::traverse_scopes_and_check(
     // symbols.back().push_back(data_decl_stmt);
   }
 
+  if (auto *print_stmt = dynamic_cast<PrintStmt *>(stmt);
+      print_stmt != nullptr) {
+    return traverse_scopes_and_check(print_stmt->expr.get(), symbols);
+  }
+
+  if (auto *ret_stmt = dynamic_cast<ReturnStmt *>(stmt); ret_stmt != nullptr) {
+    if (ret_stmt->value.has_value()) {
+      return traverse_scopes_and_check(ret_stmt->value.value().get(), symbols);
+    }
+  }
+
   if (auto *expr_stmt = dynamic_cast<ExprStmt *>(stmt); expr_stmt != nullptr) {
     return traverse_scopes_and_check(expr_stmt->expr.get(), symbols);
   }
