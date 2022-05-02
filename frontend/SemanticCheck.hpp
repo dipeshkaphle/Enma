@@ -2,6 +2,7 @@
 
 #include "Expression.hpp"
 #include "Statements.hpp"
+#include "SymbolTable.hpp"
 
 #include <tl/optional.hpp>
 
@@ -16,34 +17,15 @@ public:
   };
 
 private:
-  void add_to_symtable(const std::string &scope, symbol_type entry);
-  // void traverse_scopes_and_check_undeclared_variables(Stmt *stmt,
-  // const std::string &scope,
-  // size_t stmt_no);
+  tl::optional<semantic_error> traverse_scopes_and_check(Expr *expr,
+                                                         SymTable &table);
 
-  tl::optional<semantic_error>
-  traverse_scopes_and_check(Expr *expr, vector<vector<symbol_type>> &symbols);
-
-  tl::optional<semantic_error>
-  traverse_scopes_and_check(Stmt *stmt, vector<vector<symbol_type>> &symbols);
-
-  bool has_symbol(vector<vector<symbol_type>> &symbols,
-                  const std::string &symbol_name);
-
-  tl::optional<Type> get_type(const std::string &symbol,
-                              std::span<std::vector<symbol_type>> symbols);
-  tl::optional<Type> get_expr_type(expr::Expr *exp,
-                                   std::span<std::vector<symbol_type>> symbols);
-
-  tl::optional<symbol_type>
-  get_symbol(const std::string &symbol,
-             std::span<std::vector<symbol_type>> symbols);
+  tl::optional<semantic_error> traverse_scopes_and_check(Stmt *stmt,
+                                                         SymTable &table);
 
   bool is_primitive_type(const std::string &symbol);
 
 public:
-  static inline std::unordered_map<std::string, std::deque<symbol_type>>
-      sym_table;
   std::vector<std::unique_ptr<Stmt>> stmts;
   SemanticChecker(std::vector<std::unique_ptr<Stmt>>);
 

@@ -1,0 +1,23 @@
+#include "Common.hpp"
+enum class OpCode {
+  PUSH,
+  LOAD,
+  RET,
+  JNZ,
+  JMP,
+  CALL,
+  ADD,
+  SUB,
+  MUL,
+  DIV,
+  EQ,
+  NEQ,
+  GT,
+  GE,
+  LT,
+  LE,
+  NOT,
+  AND,
+  OR,
+  PRINT,
+};

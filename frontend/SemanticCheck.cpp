@@ -17,27 +17,10 @@
 
 SemanticChecker::SemanticChecker(std::vector<std::unique_ptr<Stmt>> stmts)
     : stmts(std::move(stmts)) {}
-void SemanticChecker::add_to_symtable(const std::string &scope,
-                                      symbol_type entry) {
-  this->sym_table[scope].emplace_back(entry);
-}
-
-bool SemanticChecker::has_symbol(vector<vector<symbol_type>> &symbols,
-                                 const std::string &symbol_name) {
-  for (auto &v : symbols | std::ranges::views::reverse) {
-    for (auto &sym : v) {
-
-      if (symbol_name ==
-          std::visit(overloaded{[](FnStmt *fn) { return fn->name.lexeme; },
-                                [](LetStmt *lt) { return lt->name.lexeme; },
-                                [](auto) { return std::string(""); }},
-                     sym)) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
+// void SemanticChecker::add_to_symtable(const std::string &scope,
+// symbol_type entry) {
+// this->sym_table[scope].emplace_back(entry);
+// }
 
 bool SemanticChecker::is_primitive_type(const std::string &symbol) {
   return std::ranges::any_of(
@@ -46,16 +29,15 @@ bool SemanticChecker::is_primitive_type(const std::string &symbol) {
 }
 
 tl::optional<SemanticChecker::semantic_error>
-SemanticChecker::traverse_scopes_and_check(
-    expr::Expr *expr, std::vector<std::vector<symbol_type>> &symbols) {
+SemanticChecker::traverse_scopes_and_check(expr::Expr *expr, SymTable &table) {
 
   if (auto *assign_expr = dynamic_cast<expr::AssignExpr *>(expr);
       assign_expr != nullptr) {
     // Its an assignment expression
     // Check the rhs and then check if lhs is a valid symbol
-    return traverse_scopes_and_check(assign_expr->value.get(), symbols)
+    return traverse_scopes_and_check(assign_expr->value.get(), table)
         .or_else([&]() -> tl::optional<SemanticChecker::semantic_error> {
-          if (!has_symbol(symbols, assign_expr->name.lexeme)) {
+          if (!table.has_symbol(assign_expr->name.lexeme)) {
             return tl::make_optional<SemanticChecker::semantic_error>(
                 SemanticChecker::semantic_error(
                     fmt::format("Undeclared symbol {} in line {}",
@@ -63,8 +45,8 @@ SemanticChecker::traverse_scopes_and_check(
                                 assign_expr->name.line)
                         .c_str()));
           }
-          if (this->get_type(assign_expr->name.lexeme, symbols) !=
-              this->get_expr_type(assign_expr->value.get(), symbols)) {
+          if (table.get_type(assign_expr->name.lexeme) !=
+              table.get_expr_type(assign_expr->value.get())) {
             return SemanticChecker::semantic_error(
                 fmt::format("Type of LHS != Type of RHS in line {}",
                             assign_expr->name.line)
@@ -76,7 +58,7 @@ SemanticChecker::traverse_scopes_and_check(
   if (auto *var_expr = dynamic_cast<expr::VarExpr *>(expr);
       var_expr != nullptr) {
     // VarExpr: Check if the variable is a valid symbol
-    if (!has_symbol(symbols, var_expr->name.lexeme)) {
+    if (!table.has_symbol(var_expr->name.lexeme)) {
       return tl::make_optional<SemanticChecker::semantic_error>(
           SemanticChecker::semantic_error(
               fmt::format("Undeclared symbol {} in line {}",
@@ -88,16 +70,16 @@ SemanticChecker::traverse_scopes_and_check(
   if (auto *cond_expr = dynamic_cast<expr::ConditionalExpr *>(expr);
       cond_expr != nullptr) {
     // ConditionalExpr: Check the condition, then the blocks
-    return traverse_scopes_and_check(cond_expr->cond.get(), symbols)
+    return traverse_scopes_and_check(cond_expr->cond.get(), table)
         .or_else([&]() {
-          return traverse_scopes_and_check(cond_expr->then_expr.get(), symbols);
+          return traverse_scopes_and_check(cond_expr->then_expr.get(), table);
         })
         .or_else([&]() {
-          return traverse_scopes_and_check(cond_expr->else_expr.get(), symbols);
+          return traverse_scopes_and_check(cond_expr->else_expr.get(), table);
         })
         .or_else([&]() -> tl::optional<SemanticChecker::semantic_error> {
-          if (get_expr_type(cond_expr->else_expr.get(), symbols) !=
-              get_expr_type(cond_expr->then_expr.get(), symbols)) {
+          if (table.get_expr_type(cond_expr->else_expr.get()) !=
+              table.get_expr_type(cond_expr->then_expr.get())) {
             return SemanticChecker::semantic_error(
                 fmt::format("Type of else branch != Type of then branch in "
                             "ConditionalExpr")
@@ -110,13 +92,13 @@ SemanticChecker::traverse_scopes_and_check(
   if (auto *bin_expr = dynamic_cast<expr::BinaryExpr *>(expr);
       bin_expr != nullptr) {
     // BinaryExpr: Check lhs and rhs
-    return traverse_scopes_and_check(bin_expr->left.get(), symbols)
+    return traverse_scopes_and_check(bin_expr->left.get(), table)
         .or_else([&]() {
-          return traverse_scopes_and_check(bin_expr->right.get(), symbols);
+          return traverse_scopes_and_check(bin_expr->right.get(), table);
         })
         .or_else([&]() -> tl::optional<SemanticChecker::semantic_error> {
-          if (get_expr_type(bin_expr->left.get(), symbols) !=
-              get_expr_type(bin_expr->right.get(), symbols)) {
+          if (table.get_expr_type(bin_expr->left.get()) !=
+              table.get_expr_type(bin_expr->right.get())) {
             return SemanticChecker::semantic_error(
                 fmt::format("Type of lhs != Type of rhs in "
                             "BinaryExpr in line {}",
@@ -126,7 +108,6 @@ SemanticChecker::traverse_scopes_and_check(
           return {};
         });
   }
-
   // TODO
   if (auto *attr_access = dynamic_cast<expr::AttrAccessExpr *>(expr);
       attr_access != nullptr) {
@@ -134,15 +115,15 @@ SemanticChecker::traverse_scopes_and_check(
         var != nullptr) {
     }
     // auto [type_name, remaining_scope] = get_type_of(attr_access->left,
-    // std::span<std::vector<symbol_type>> symbols)
+    // std::span<std::vector<symbol_type>> table)
   }
 
   if (auto *prefix_expr = dynamic_cast<expr::PrefixExpr *>(expr);
       prefix_expr != nullptr) {
     // PrefixExpr: Check the expression
-    return traverse_scopes_and_check(prefix_expr->right.get(), symbols)
+    return traverse_scopes_and_check(prefix_expr->right.get(), table)
         .or_else([&]() -> tl::optional<SemanticChecker::semantic_error> {
-          auto type = get_expr_type(prefix_expr->right.get(), symbols);
+          auto type = table.get_expr_type(prefix_expr->right.get());
           tl::optional<Type> INT = "int";
           tl::optional<Type> DOUBLE = "double";
           tl::optional<Type> BOOL = "bool";
@@ -162,7 +143,7 @@ SemanticChecker::traverse_scopes_and_check(
     // CallExpr: Check that its a valid symbol and check all the params
     if (auto *var = dynamic_cast<expr::VarExpr *>(call_expr->callee.get());
         var != nullptr) {
-      if (!has_symbol(symbols, var->name.lexeme)) {
+      if (!table.has_symbol(var->name.lexeme)) {
         return tl::make_optional<SemanticChecker::semantic_error>(
             SemanticChecker::semantic_error(
                 fmt::format("Undeclared symbol {} in line {}", var->name.lexeme,
@@ -172,7 +153,7 @@ SemanticChecker::traverse_scopes_and_check(
     }
 
     for (auto &exp : call_expr->arguments) {
-      auto res = traverse_scopes_and_check(exp.get(), symbols);
+      auto res = traverse_scopes_and_check(exp.get(), table);
       if (res.has_value()) {
         return res;
       }
@@ -182,17 +163,16 @@ SemanticChecker::traverse_scopes_and_check(
 }
 
 tl::optional<SemanticChecker::semantic_error>
-SemanticChecker::traverse_scopes_and_check(
-    Stmt *stmt, vector<vector<symbol_type>> &symbols) {
+SemanticChecker::traverse_scopes_and_check(Stmt *stmt, SymTable &table) {
 
   tl::optional<SemanticChecker::semantic_error> maybe_err;
   if (auto *fn = dynamic_cast<FnStmt *>(stmt); fn != nullptr) {
 
     // Put the function in table
     // Put the params in table
-    // For every statement in body, check if they are valid and declared symbols
+    // For every statement in body, check if they are valid and declared table
 
-    symbols.back().push_back(fn);
+    table.back().emplace_back(fn);
 
     std::deque<std::unique_ptr<LetStmt>> params_as_let_stmt;
     std::ranges::transform(
@@ -205,29 +185,29 @@ SemanticChecker::traverse_scopes_and_check(
               std::make_unique<expr::LiteralExpr>(std::monostate()));
         });
 
-    symbols.emplace_back();
+    table.push_frame();
 
     std::ranges::for_each(params_as_let_stmt,
                           [&](std::unique_ptr<LetStmt> &param) {
-                            symbols.back().push_back(param.get());
+                            table.back().emplace_back(param.get());
                           });
 
     for (stmt_ptr &body_stmt : fn->body) {
-      maybe_err = traverse_scopes_and_check(body_stmt.get(), symbols);
+      maybe_err = traverse_scopes_and_check(body_stmt.get(), table);
       if (maybe_err.has_value()) {
         break;
       }
     }
-    symbols.pop_back();
+    table.pop_frame();
     return maybe_err;
   }
 
   if (auto *let_stmt = dynamic_cast<LetStmt *>(stmt); let_stmt != nullptr) {
     // Check if rhs is valid
-    return traverse_scopes_and_check(let_stmt->initializer_expr.get(), symbols)
+    return traverse_scopes_and_check(let_stmt->initializer_expr.get(), table)
         .or_else([&]() {
           if (!let_stmt->type.has_value()) {
-            auto val = get_expr_type(let_stmt->initializer_expr.get(), symbols);
+            auto val = table.get_expr_type(let_stmt->initializer_expr.get());
             if (val.has_value()) {
               let_stmt->type =
                   Token(TokenType::IDENTIFIER,
@@ -243,7 +223,7 @@ SemanticChecker::traverse_scopes_and_check(
           }
         })
         .or_else([&]() {
-          return get_expr_type(let_stmt->initializer_expr.get(), symbols)
+          return table.get_expr_type(let_stmt->initializer_expr.get())
               .and_then([&](Type &&rhs_type)
                             -> tl::optional<SemanticChecker::semantic_error> {
                 // LetStmt only supports normal types, not possible to do
@@ -266,35 +246,35 @@ SemanticChecker::traverse_scopes_and_check(
                         .c_str());
               });
         })
-        .or_else([&]() { symbols.back().push_back(let_stmt); });
+        .or_else([&]() { table.back().emplace_back(let_stmt); });
   }
 
   if (auto *block_stmt = dynamic_cast<BlockStmt *>(stmt);
       block_stmt != nullptr) {
     // Create new frame
-    symbols.emplace_back();
+    table.push_frame();
 
     for (auto &blck_entry : block_stmt->statements) {
-      maybe_err = traverse_scopes_and_check(blck_entry.get(), symbols);
+      maybe_err = traverse_scopes_and_check(blck_entry.get(), table);
       if (maybe_err.has_value()) {
         break;
       }
     }
     // Pop the frame
-    symbols.pop_back();
+    table.pop_frame();
   }
 
   if (auto *if_stmt = dynamic_cast<IfStmt *>(stmt); if_stmt != nullptr) {
     // Check if condition is valid, then check if then is valid and check if
     // else is valid
-    return traverse_scopes_and_check(if_stmt->condition.get(), symbols)
+    return traverse_scopes_and_check(if_stmt->condition.get(), table)
         .or_else([&]() {
-          return traverse_scopes_and_check(if_stmt->then_branch.get(), symbols);
+          return traverse_scopes_and_check(if_stmt->then_branch.get(), table);
         })
         .or_else([&]() -> tl::optional<SemanticChecker::semantic_error> {
           if (if_stmt->else_branch.has_value()) {
             return traverse_scopes_and_check(if_stmt->else_branch.value().get(),
-                                             symbols);
+                                             table);
           }
           return {};
         });
@@ -302,113 +282,31 @@ SemanticChecker::traverse_scopes_and_check(
 
   if (auto *while_stmt = dynamic_cast<WhileStmt *>(stmt);
       while_stmt != nullptr) {
-    return traverse_scopes_and_check(while_stmt->condition.get(), symbols)
+    return traverse_scopes_and_check(while_stmt->condition.get(), table)
         .or_else([&]() {
-          return traverse_scopes_and_check(while_stmt->body.get(), symbols);
+          return traverse_scopes_and_check(while_stmt->body.get(), table);
         });
   }
 
   if (auto *data_decl_stmt = dynamic_cast<DataDeclStmt *>(stmt);
       data_decl_stmt != nullptr) {
     // TODO
-    // symbols.back().push_back(data_decl_stmt);
+    // table.back().push_back(data_decl_stmt);
   }
 
   if (auto *print_stmt = dynamic_cast<PrintStmt *>(stmt);
       print_stmt != nullptr) {
-    return traverse_scopes_and_check(print_stmt->expr.get(), symbols);
+    return traverse_scopes_and_check(print_stmt->expr.get(), table);
   }
 
   if (auto *ret_stmt = dynamic_cast<ReturnStmt *>(stmt); ret_stmt != nullptr) {
     if (ret_stmt->value.has_value()) {
-      return traverse_scopes_and_check(ret_stmt->value.value().get(), symbols);
+      return traverse_scopes_and_check(ret_stmt->value.value().get(), table);
     }
   }
 
   if (auto *expr_stmt = dynamic_cast<ExprStmt *>(stmt); expr_stmt != nullptr) {
-    return traverse_scopes_and_check(expr_stmt->expr.get(), symbols);
-  }
-  return {};
-}
-
-tl::optional<Type>
-SemanticChecker::get_type(const std::string &symbol,
-                          std::span<std::vector<symbol_type>> symbols) {
-  return get_symbol(symbol, symbols).and_then([](symbol_type &&sym) {
-    return std::visit(
-        overloaded{[](FnStmt *fn) -> tl::optional<Type> {
-                     return std::pair{fn->param_types, fn->return_type};
-                   },
-                   [](LetStmt *let) {
-                     return let->type.has_value()
-                                ? tl::optional<Type>(let->type.value().lexeme)
-                                : tl::nullopt;
-                   },
-                   [](auto) -> tl::optional<Type> { return {}; }},
-        sym);
-  });
-}
-
-tl::optional<symbol_type>
-SemanticChecker::get_symbol(const std::string &symbol,
-                            std::span<std::vector<symbol_type>> symbols) {
-  for (auto &spn : symbols | std::views::reverse) {
-    for (symbol_type &sym : spn | std::views::reverse) {
-      auto symbol_name =
-          std::visit(overloaded{[&](FnStmt *fn) { return fn->name.lexeme; },
-                                [&](LetStmt *let) { return let->name.lexeme; },
-                                [&](DataDeclStmt *data) {
-                                  return data->struct_name.lexeme;
-                                }},
-                     sym);
-      if (symbol_name == symbol) {
-        return sym;
-      }
-    }
-  }
-  return {};
-}
-
-tl::optional<Type>
-SemanticChecker::get_expr_type(expr::Expr *exp,
-                               std::span<std::vector<symbol_type>> symbols) {
-  IF_IS_TYPE(bin_exp, expr::BinaryExpr, exp) {
-    return get_expr_type(bin_exp->left.get(), symbols);
-  }
-
-  IF_IS_TYPE(unary_expr, expr::PrefixExpr, exp) {
-    return get_expr_type(unary_expr->right.get(), symbols);
-  }
-  IF_IS_TYPE(var_expr, expr::VarExpr, exp) {
-    return this->get_type(var_expr->name.lexeme, symbols);
-  }
-  IF_IS_TYPE(assign_expr, expr::AssignExpr, exp) {
-    return this->get_type(assign_expr->name.lexeme, symbols);
-  }
-  IF_IS_TYPE(lit_expr, expr::LiteralExpr, exp) {
-    return std::visit(
-        overloaded{[&](int64_t) { return "int"; },
-                   [](double) { return "double"; }, [](bool) { return "bool"; },
-                   [](std::string) { return "string"; },
-                   [](char) { return "char"; }, [](auto) { return "void"; }},
-        lit_expr->value);
-  }
-  IF_IS_TYPE(cond_expr, expr::ConditionalExpr, exp) {
-    return get_expr_type(cond_expr->else_expr.get(), symbols);
-  }
-  IF_IS_TYPE(call_expr, expr::CallExpr, exp) {
-    IF_IS_TYPE(var_expr, expr::VarExpr, call_expr->callee.get()) {
-      this->get_symbol(var_expr->name.lexeme, symbols)
-          .and_then([](symbol_type &&sym) {
-            return std::visit(
-                overloaded{[&](FnStmt *fn) -> tl::optional<Type> {
-                             return std::pair{fn->param_types, fn->return_type};
-                           },
-                           [&](auto) -> tl::optional<Type> { return {}; }},
-                sym);
-          });
-    }
-    return {};
+    return traverse_scopes_and_check(expr_stmt->expr.get(), table);
   }
   return {};
 }
@@ -417,9 +315,10 @@ vector<SemanticChecker::semantic_error>
 SemanticChecker::infer_type_type_check_and_undeclared_symbols_check() {
 
   std::vector<SemanticChecker::semantic_error> errors;
-  std::vector<std::vector<symbol_type>> symbols(1, std::vector<symbol_type>());
+  // std::vector<std::vector<symbol_type>> table(1, std::vector<symbol_type>());
+  SymTable table;
   std::ranges::for_each(this->stmts, [&](std::unique_ptr<Stmt> &stmt) {
-    auto res = traverse_scopes_and_check(stmt.get(), symbols);
+    auto res = traverse_scopes_and_check(stmt.get(), table);
     if (res.has_value()) {
       errors.push_back(res.value());
     }

@@ -10,6 +10,7 @@ target_sources(
           Expression.cpp
           Statements.cpp
           SemanticCheck.cpp
+          SymbolTable.cpp
           Common.cpp)
 
 add_library(enma-interpreter-lib)

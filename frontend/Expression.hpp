@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Common.hpp"
+#include "Instuctions.hpp"
 #include "Lexer.hpp"
 
 #include <memory>
@@ -17,6 +18,7 @@ public:
   virtual ~Expr();
   [[nodiscard]] virtual string to_sexp() const = 0;
   [[nodiscard]] virtual std::vector<std::string> gen_intermediate() = 0;
+  [[nodiscard]] virtual std::vector<Instr> compile_to_bytecode() = 0;
 };
 
 struct BinaryExpr : public Expr {
@@ -26,6 +28,7 @@ struct BinaryExpr : public Expr {
   BinaryExpr(Token op, std::unique_ptr<Expr> left, std::unique_ptr<Expr> right);
   [[nodiscard]] string to_sexp() const override;
   std::vector<std::string> gen_intermediate() override;
+  std::vector<Instr> compile_to_bytecode() override;
 };
 
 struct PrefixExpr : public Expr {
@@ -34,6 +37,7 @@ struct PrefixExpr : public Expr {
   PrefixExpr(Token op, std::unique_ptr<Expr> right);
   [[nodiscard]] string to_sexp() const override;
   std::vector<std::string> gen_intermediate() override;
+  std::vector<Instr> compile_to_bytecode() override;
 };
 
 struct AttrAccessExpr : public Expr {
@@ -44,6 +48,7 @@ struct AttrAccessExpr : public Expr {
                  std::unique_ptr<Expr> right);
   [[nodiscard]] string to_sexp() const override;
   std::vector<std::string> gen_intermediate() override;
+  std::vector<Instr> compile_to_bytecode() override;
 };
 
 struct VarExpr : public Expr {
@@ -52,6 +57,7 @@ struct VarExpr : public Expr {
 
   [[nodiscard]] string to_sexp() const override;
   std::vector<std::string> gen_intermediate() override;
+  std::vector<Instr> compile_to_bytecode() override;
 };
 
 struct LiteralExpr : public Expr {
@@ -61,6 +67,7 @@ struct LiteralExpr : public Expr {
 
   [[nodiscard]] string to_sexp() const override;
   std::vector<std::string> gen_intermediate() override;
+  std::vector<Instr> compile_to_bytecode() override;
 };
 
 struct CallExpr : public Expr {
@@ -71,6 +78,7 @@ struct CallExpr : public Expr {
            std::vector<std::unique_ptr<Expr>> args);
   [[nodiscard]] string to_sexp() const override;
   std::vector<std::string> gen_intermediate() override;
+  std::vector<Instr> compile_to_bytecode() override;
 };
 
 struct AssignExpr : public Expr {
@@ -79,6 +87,7 @@ struct AssignExpr : public Expr {
   AssignExpr(Token name, std::unique_ptr<Expr> val);
   [[nodiscard]] string to_sexp() const override;
   std::vector<std::string> gen_intermediate() override;
+  std::vector<Instr> compile_to_bytecode() override;
 };
 
 struct ConditionalExpr : public Expr {
@@ -90,6 +99,7 @@ struct ConditionalExpr : public Expr {
 
   [[nodiscard]] string to_sexp() const override;
   std::vector<std::string> gen_intermediate() override;
+  std::vector<Instr> compile_to_bytecode() override;
 };
 
 } // namespace expr
