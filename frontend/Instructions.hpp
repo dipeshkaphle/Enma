@@ -1,6 +1,9 @@
 #pragma once
 
+#include "Common.hpp"
+
 #include <variant>
+#include <vector>
 
 template <typename T> struct Push { T val; };
 template <typename T> struct Load {
@@ -25,6 +28,9 @@ struct Ret {};
 struct Call {};
 struct Jnz {};
 struct Jmp {};
+struct Lbl {
+	std::string label_name;
+};
 
 
 using Instr = std::variant<
@@ -82,5 +88,6 @@ using Instr = std::variant<
  Ret,
  Call,
  Jmp,
- Jnz
+ Jnz,
+ Lbl
  >;

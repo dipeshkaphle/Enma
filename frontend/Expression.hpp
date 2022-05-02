@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Common.hpp"
-#include "Instuctions.hpp"
+#include "Instructions.hpp"
 #include "Lexer.hpp"
 
 #include <memory>
