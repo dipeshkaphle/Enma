@@ -32,14 +32,29 @@ vector<std::string> BlockStmt::gen_intermediate() {
   }
   return instrs;
 }
+vector<std::string> BlockStmt::transpile_to_cpp() {
+  auto all_stmts =
+      this->statements | std::ranges::views::transform([](auto &s) {
+        return fmt::format("{}", fmt::join(s->transpile_to_cpp(), "\n"));
+      }) |
+      tl::to<std::vector<std::string>>();
+  return {fmt::format("{{\n  {} \n}}\n", fmt::join(all_stmts, "\n"))};
+  // std::vector<std::string> output;
+  // std::ranges::for_each(all_stmts, [&](vector<std::string> &vec) {
+  // std::ranges::copy(vec, std::back_inserter(output));
+  // });
+  // return output;
+}
 
 BreakStmt::BreakStmt() = default;
 string BreakStmt::to_sexp() const { return fmt::format("(break)"); }
 vector<std::string> BreakStmt::gen_intermediate() { return {"  break"}; }
+vector<std::string> BreakStmt::transpile_to_cpp() { return {"break;"}; }
 
 ContinueStmt::ContinueStmt() = default;
 string ContinueStmt::to_sexp() const { return fmt::format("(continue)"); }
 vector<std::string> ContinueStmt::gen_intermediate() { return {"  continue"}; }
+vector<std::string> ContinueStmt::transpile_to_cpp() { return {"continue;"}; }
 
 DataDeclStmt::DataDeclStmt(Token struct_name, std::vector<Token> names,
                            std::vector<Token> types)
@@ -63,11 +78,15 @@ string DataDeclStmt::to_sexp() const {
                      fmt::join(param_and_types, ","));
 }
 vector<std::string> DataDeclStmt::gen_intermediate() { return {}; }
+vector<std::string> DataDeclStmt::transpile_to_cpp() { return {}; }
 
 ExprStmt::ExprStmt(std::unique_ptr<Expr> expr) : expr(std::move(expr)) {}
 string ExprStmt::to_sexp() const { return fmt::format("{}", expr->to_sexp()); }
 vector<std::string> ExprStmt::gen_intermediate() {
   return this->expr->gen_intermediate();
+}
+vector<std::string> ExprStmt::transpile_to_cpp() {
+  return {fmt::format("{};", this->expr->transpile_to_cpp())};
 }
 
 FnStmt::FnStmt(Token fn_name, std::vector<Token> params,
@@ -106,6 +125,35 @@ vector<std::string> FnStmt::gen_intermediate() {
   }
   return instrs;
 }
+vector<std::string> FnStmt::transpile_to_cpp() {
+
+  // return {};
+
+  auto parameters = fmt::format(
+      "{}", fmt::join(this->params |
+                          std::views::transform([&, i = 0](auto &tok) mutable {
+                            return this->param_types[i++] + " " + tok.lexeme;
+                          }) |
+                          tl::to<std::vector<std::string>>(),
+                      ","));
+  auto fn_body = fmt::format(
+      "{}", fmt::join(this->body | std::views::transform([](auto &s) {
+                        return fmt::format(
+                            "{}", fmt::join(s->transpile_to_cpp(), "\n"));
+                      }) | tl::to<std::vector<std::string>>(),
+                      "\n"));
+
+  auto type = fmt::format("std::function<{}({})>", this->return_type,
+                          fmt::join(param_types, ","));
+
+  return {
+
+      fmt::format("{} {} = [=, &{}]({})", type, this->name.lexeme,
+                  this->name.lexeme, parameters),
+      fmt::format("{{\n{}\n}};\n", fn_body)
+
+  };
+}
 
 IfStmt::IfStmt(std::unique_ptr<Expr> condition,
                std::unique_ptr<Stmt> then_branch,
@@ -139,6 +187,18 @@ vector<std::string> IfStmt::gen_intermediate() {
   // instrs.emplace_back("  Jmp <IP+1>");
   return instrs;
 }
+vector<std::string> IfStmt::transpile_to_cpp() {
+  return {fmt::format("if ({}) ", this->condition->transpile_to_cpp()),
+          fmt::format("{}\n",
+                      fmt::join(this->then_branch->transpile_to_cpp(), "\n")),
+          fmt::format(
+              "{}", else_branch.has_value()
+                        ? fmt::format(
+                              "else {}",
+                              fmt::join(else_branch.value()->transpile_to_cpp(),
+                                        "\n"))
+                        : "")};
+}
 
 LetStmt::LetStmt(Token name, std::optional<Token> type,
                  std::unique_ptr<Expr> expr)
@@ -156,6 +216,11 @@ vector<std::string> LetStmt::gen_intermediate() {
   instrs.insert(instrs.end(), rhs.begin(), rhs.end());
   instrs.push_back(fmt::format("  Load {}", this->name.lexeme));
   return instrs;
+}
+vector<std::string> LetStmt::transpile_to_cpp() {
+  return {fmt::format("{} {} = {};", this->type.value().lexeme,
+                      this->name.lexeme,
+                      this->initializer_expr->transpile_to_cpp())};
 }
 
 PrintStmt::PrintStmt(std::unique_ptr<Expr> expr, bool new_line)
@@ -175,6 +240,12 @@ vector<std::string> PrintStmt::gen_intermediate() {
   }
   return instrs;
 }
+vector<std::string> PrintStmt::transpile_to_cpp() {
+  if (has_newline) {
+    return {fmt::format("cout << {} <<endl ;", this->expr->transpile_to_cpp())};
+  }
+  return {fmt::format("cout<< {};", this->expr->transpile_to_cpp())};
+}
 
 ReturnStmt::ReturnStmt(Token keyword, std::optional<std::unique_ptr<Expr>> val)
     : keyword(std::move(keyword)), value(std::move(val)) {}
@@ -183,6 +254,11 @@ string ReturnStmt::to_sexp() const {
                                                       : std::string(""));
 }
 vector<std::string> ReturnStmt::gen_intermediate() { return {"  Ret"}; }
+vector<std::string> ReturnStmt::transpile_to_cpp() {
+  return {fmt::format(
+      "return {};",
+      this->value.has_value() ? this->value.value()->transpile_to_cpp() : "")};
+}
 
 WhileStmt::WhileStmt(std::unique_ptr<Expr> condition,
                      std::unique_ptr<Stmt> body,
@@ -227,4 +303,8 @@ vector<std::string> WhileStmt::gen_intermediate() {
   instrs.insert(instrs.end(), block.begin(), block.end());
   instrs.emplace_back(fmt::format("  Jmp {} // jump back to loop", label));
   return instrs;
+}
+vector<std::string> WhileStmt::transpile_to_cpp() {
+  return {fmt::format("while({})", this->condition->transpile_to_cpp()),
+          fmt::format("{}", fmt::join(this->body->transpile_to_cpp(), "\n"))};
 }

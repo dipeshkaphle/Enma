@@ -37,3 +37,18 @@ fn sum(n: int ): int  {
 	return sm;
 }
 
+fn fib(n: int) : int{
+	if(n <= 1){
+		return n;
+	}
+	return fib(n-1) + fib(n-2);
+}
+
+println sum(100);
+
+let j = 10;
+let y = 1;
+while(y<=j){
+	println fib(y);
+	y = y + 1;
+}

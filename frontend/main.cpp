@@ -85,6 +85,17 @@ void run(const string &source, [[maybe_unused]] bool is_repl = false) {
   fmt::print("=======================================\n");
   for (auto &s : instrs)
     fmt::print("{}\n", s);
+  ofstream f("out.cpp");
+
+  fmt::print(f, "#include <string>\n");
+  fmt::print(f, "#include <iostream>\n");
+  fmt::print(f, "#include <functional>\n");
+  fmt::print(f, "using namespace std;\n");
+  fmt::print(f, "int main(){{\n");
+  for (auto &s : all_statements) {
+    fmt::print(f, "{}\n", fmt::join(s->transpile_to_cpp(), "\n"));
+  }
+  fmt::print(f, "}}\n");
 }
 
 void runFile(const char *filename) {

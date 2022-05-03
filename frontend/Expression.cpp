@@ -40,7 +40,10 @@ std::vector<std::string> BinaryExpr::gen_intermediate() {
                   this->op.lexeme));
   return instrs;
 }
-std::vector<Instr> BinaryExpr::compile_to_bytecode() {}
+std::string BinaryExpr::transpile_to_cpp() {
+  return this->left->transpile_to_cpp() + " " + this->op.lexeme + " " +
+         this->right->transpile_to_cpp();
+}
 
 PrefixExpr::PrefixExpr(Token op, std::unique_ptr<Expr> right)
     : op(std::move(op)), right(std::move(right)) {}
@@ -58,7 +61,9 @@ std::vector<std::string> PrefixExpr::gen_intermediate() {
       this->op.lexeme));
   return instrs;
 }
-std::vector<Instr> PrefixExpr::compile_to_bytecode() {}
+std::string PrefixExpr::transpile_to_cpp() {
+  return "(" + this->op.lexeme + this->right->transpile_to_cpp() + ")";
+}
 
 AttrAccessExpr::AttrAccessExpr(Token op, std::unique_ptr<Expr> left,
                                std::unique_ptr<Expr> right)
@@ -66,8 +71,9 @@ AttrAccessExpr::AttrAccessExpr(Token op, std::unique_ptr<Expr> left,
 string AttrAccessExpr::to_sexp() const {
   return fmt::format("(. {} {})", left->to_sexp(), right->to_sexp());
 }
+// TODO
 std::vector<std::string> AttrAccessExpr::gen_intermediate() { return {}; }
-std::vector<Instr> AttrAccessExpr::compile_to_bytecode() {}
+std::string AttrAccessExpr::transpile_to_cpp() { return ""; }
 
 VarExpr::VarExpr(Token name) : name(std::move(name)) {}
 
@@ -75,7 +81,7 @@ string VarExpr::to_sexp() const { return fmt::format("{}", this->name.lexeme); }
 std::vector<std::string> VarExpr::gen_intermediate() {
   return {fmt::format("  Push {}  //Push variable", this->name.lexeme)};
 }
-std::vector<Instr> VarExpr::compile_to_bytecode() {}
+std::string VarExpr::transpile_to_cpp() { return this->name.lexeme; }
 
 LiteralExpr::LiteralExpr(literal_type val) : value(std::move(val)) {}
 
@@ -87,7 +93,9 @@ std::vector<std::string> LiteralExpr::gen_intermediate() {
   return {fmt::format("  PushI {} //Push intermediate",
                       literal_as_literal_string(this->value))};
 }
-std::vector<Instr> LiteralExpr::compile_to_bytecode() {}
+std::string LiteralExpr::transpile_to_cpp() {
+  return literal_as_literal_string(this->value);
+}
 
 CallExpr::CallExpr(std::unique_ptr<Expr> callee, Token paren,
                    std::vector<std::unique_ptr<Expr>> args)
@@ -115,7 +123,14 @@ std::vector<std::string> CallExpr::gen_intermediate() {
   }
   return instrs;
 }
-std::vector<Instr> CallExpr::compile_to_bytecode() {}
+std::string CallExpr::transpile_to_cpp() {
+  return fmt::format(
+      "{}({})", this->callee->transpile_to_cpp(),
+      fmt::join(this->arguments | std::views::transform([](auto &s) {
+                  return s->transpile_to_cpp();
+                }),
+                ","));
+}
 
 AssignExpr::AssignExpr(Token name, std::unique_ptr<Expr> val)
     : name(std::move(name)), value(std::move(val)) {}
@@ -131,7 +146,9 @@ std::vector<std::string> AssignExpr::gen_intermediate() {
   instrs.push_back(fmt::format("  Load {}", this->name.lexeme));
   return instrs;
 }
-std::vector<Instr> AssignExpr::compile_to_bytecode() {}
+std::string AssignExpr::transpile_to_cpp() {
+  return this->name.lexeme + " = " + this->value->transpile_to_cpp();
+}
 
 ConditionalExpr::ConditionalExpr(std::unique_ptr<Expr> cond,
                                  std::unique_ptr<Expr> then_expr,
@@ -158,4 +175,8 @@ std::vector<std::string> ConditionalExpr::gen_intermediate() {
                       "pushes one of the branches based on cond");
   return instrs;
 }
-std::vector<Instr> ConditionalExpr::compile_to_bytecode() {}
+std::string ConditionalExpr::transpile_to_cpp() {
+  return fmt::format("if ({}) {{ {} }} else {{ {} }} ",
+                     cond->transpile_to_cpp(), then_expr->transpile_to_cpp(),
+                     else_expr->transpile_to_cpp());
+}
