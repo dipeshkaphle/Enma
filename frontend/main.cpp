@@ -96,6 +96,9 @@ void run(const string &source, [[maybe_unused]] bool is_repl = false) {
     fmt::print(f, "{}\n", fmt::join(s->transpile_to_cpp(), "\n"));
   }
   fmt::print(f, "}}\n");
+  f.close();
+
+  system("clang-format -i out.cpp");
 }
 
 void runFile(const char *filename) {
