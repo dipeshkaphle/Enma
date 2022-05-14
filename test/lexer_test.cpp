@@ -9,6 +9,7 @@
 
 TEST_CASE("Lexer") {
   std::string source = R"(
+	let x = 'c';
 data Position = {
 	x': int; // x' is also identifier
 	y: int;
@@ -26,9 +27,11 @@ data Position = {
                    tl::to<std::vector<TokenType>>();
 
   REQUIRE(all_types == std::vector<TokenType>{
-                           tok::DATA, tok::IDENTIFIER, tok::EQUAL,
-                           tok::LEFT_BRACE, tok::IDENTIFIER, tok::COLON,
-                           tok::IDENTIFIER, tok::SEMICOLON, tok::IDENTIFIER,
-                           tok::COLON, tok::IDENTIFIER, tok::SEMICOLON,
-                           tok::RIGHT_BRACE, tok::SEMICOLON, tok::ENDOFFILE});
+                           tok::LET,        tok::IDENTIFIER, tok::EQUAL,
+                           tok::CHAR,       tok::SEMICOLON,  tok::DATA,
+                           tok::IDENTIFIER, tok::EQUAL,      tok::LEFT_BRACE,
+                           tok::IDENTIFIER, tok::COLON,      tok::IDENTIFIER,
+                           tok::SEMICOLON,  tok::IDENTIFIER, tok::COLON,
+                           tok::IDENTIFIER, tok::SEMICOLON,  tok::RIGHT_BRACE,
+                           tok::SEMICOLON,  tok::ENDOFFILE});
 }

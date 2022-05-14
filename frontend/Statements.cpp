@@ -253,7 +253,15 @@ string ReturnStmt::to_sexp() const {
   return fmt::format("(Return {})", value.has_value() ? value.value()->to_sexp()
                                                       : std::string(""));
 }
-vector<std::string> ReturnStmt::gen_intermediate() { return {"  Ret"}; }
+vector<std::string> ReturnStmt::gen_intermediate() {
+  vector<std::string> instrs;
+  if (this->value.has_value()) {
+    auto tmp = this->value.value()->gen_intermediate();
+    instrs.insert(instrs.end(), tmp.begin(), tmp.end());
+  }
+  instrs.emplace_back("  Ret");
+  return instrs;
+}
 vector<std::string> ReturnStmt::transpile_to_cpp() {
   return {fmt::format(
       "return {};",

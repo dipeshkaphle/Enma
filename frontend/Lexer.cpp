@@ -123,7 +123,7 @@ void Lexer::get_string(char closing) {
 }
 
 void Lexer::get_char() {
-  Lexer::get_string();
+  Lexer::get_string('\'');
   auto last_tok = tokens.back();
   tokens.pop_back();
   if (std::holds_alternative<std::string>(last_tok.literal)) {
