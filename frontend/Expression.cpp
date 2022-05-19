@@ -1,5 +1,6 @@
 #include "Expression.hpp"
 #include "Common.hpp"
+#include "SymbolTable.hpp"
 
 #include <fmt/format.h>
 #include <tl/to.hpp>
@@ -44,6 +45,16 @@ std::string BinaryExpr::transpile_to_cpp() {
   return this->left->transpile_to_cpp() + " " + this->op.lexeme + " " +
          this->right->transpile_to_cpp();
 }
+std::vector<Instr> BinaryExpr::gen_bytecode(SymTable &symtable) {
+  std::vector<Instr> instrs;
+  auto lhs = this->left->gen_bytecode(symtable);
+  auto rhs = this->right->gen_bytecode(symtable);
+  auto op_type = symtable.get_expr_type(this->left.get()).value();
+  instrs.insert(instrs.end(), lhs.begin(), lhs.end());
+  instrs.insert(instrs.end(), rhs.begin(), rhs.end());
+  instrs.emplace_back(BinOp{.op = this->op.lexeme});
+  return instrs;
+}
 
 PrefixExpr::PrefixExpr(Token op, std::unique_ptr<Expr> right)
     : op(std::move(op)), right(std::move(right)) {}
@@ -64,6 +75,13 @@ std::vector<std::string> PrefixExpr::gen_intermediate() {
 std::string PrefixExpr::transpile_to_cpp() {
   return "(" + this->op.lexeme + this->right->transpile_to_cpp() + ")";
 }
+std::vector<Instr> PrefixExpr::gen_bytecode(SymTable &symtable) {
+  std::vector<Instr> instrs;
+  auto rhs = this->right->gen_bytecode(symtable);
+  instrs.insert(instrs.end(), rhs.begin(), rhs.end());
+  instrs.emplace_back(PrefixOp{.op = this->op.lexeme});
+  return instrs;
+}
 
 AttrAccessExpr::AttrAccessExpr(Token op, std::unique_ptr<Expr> left,
                                std::unique_ptr<Expr> right)
@@ -74,6 +92,10 @@ string AttrAccessExpr::to_sexp() const {
 // TODO
 std::vector<std::string> AttrAccessExpr::gen_intermediate() { return {}; }
 std::string AttrAccessExpr::transpile_to_cpp() { return ""; }
+std::vector<Instr>
+AttrAccessExpr::gen_bytecode([[maybe_unused]] SymTable &symtable) {
+  return {};
+}
 
 VarExpr::VarExpr(Token name) : name(std::move(name)) {}
 
@@ -82,6 +104,9 @@ std::vector<std::string> VarExpr::gen_intermediate() {
   return {fmt::format("  Push {}  //Push variable", this->name.lexeme)};
 }
 std::string VarExpr::transpile_to_cpp() { return this->name.lexeme; }
+std::vector<Instr> VarExpr::gen_bytecode(SymTable &symtable) {
+  return {Ref{.offset = symtable.get_symbol_offset(this->name.lexeme).value()}};
+}
 
 LiteralExpr::LiteralExpr(literal_type val) : value(std::move(val)) {}
 
@@ -95,6 +120,27 @@ std::vector<std::string> LiteralExpr::gen_intermediate() {
 }
 std::string LiteralExpr::transpile_to_cpp() {
   return literal_as_literal_string(this->value);
+}
+std::vector<Instr>
+LiteralExpr::gen_bytecode([[maybe_unused]] SymTable &symtable) {
+
+  // using literal_type =
+  // std::variant<std::monostate, int64_t, double, bool, char, std::string>;
+  auto instr = std::visit(
+      overloaded{
+          [&](int64_t &x) -> Instr { return Instr(Push<int64_t>{.val = x}); },
+          [&](double &x) -> Instr { return Instr(Push<double>{.val = x}); },
+          [&](bool x) -> Instr { return Instr(Push<bool>{.val = x}); },
+          [&](char x) -> Instr { return Instr(Push<char>{.val = x}); },
+          [&](std::string &x) -> Instr {
+            return Instr(Push<std::string>{.val = std::move(x)});
+          },
+          [&](auto) {
+            throw std::runtime_error("Shouldn't be here");
+            return Instr(Push<int64_t>{.val = -1});
+          }},
+      this->value);
+  return {instr};
 }
 
 CallExpr::CallExpr(std::unique_ptr<Expr> callee, Token paren,
@@ -131,6 +177,18 @@ std::string CallExpr::transpile_to_cpp() {
                 }),
                 ","));
 }
+std::vector<Instr> CallExpr::gen_bytecode(SymTable &symtable) {
+  // symtable.back().push
+  std::vector<Instr> instrs;
+  for (auto &arg : this->arguments) {
+    auto arg_bytecode = arg->gen_bytecode(symtable);
+    instrs.insert(instrs.end(), arg_bytecode.begin(), arg_bytecode.end());
+  }
+  // TODO : lambda expression if they're added
+  auto fn = dynamic_cast<VarExpr *>(this->callee.get());
+  instrs.emplace_back(Call{.label = fn->name.lexeme});
+  return instrs;
+}
 
 AssignExpr::AssignExpr(Token name, std::unique_ptr<Expr> val)
     : name(std::move(name)), value(std::move(val)) {}
@@ -148,6 +206,14 @@ std::vector<std::string> AssignExpr::gen_intermediate() {
 }
 std::string AssignExpr::transpile_to_cpp() {
   return this->name.lexeme + " = " + this->value->transpile_to_cpp();
+}
+std::vector<Instr> AssignExpr::gen_bytecode(SymTable &symtable) {
+  std::vector<Instr> instrs;
+  auto rhs = this->value->gen_bytecode(symtable);
+  instrs.insert(instrs.end(), rhs.begin(), rhs.end());
+  instrs.emplace_back(
+      Load{.offset = symtable.get_symbol_offset(this->name.lexeme).value()});
+  return instrs;
 }
 
 ConditionalExpr::ConditionalExpr(std::unique_ptr<Expr> cond,
@@ -179,4 +245,16 @@ std::string ConditionalExpr::transpile_to_cpp() {
   return fmt::format("if ({}) {{ {} }} else {{ {} }} ",
                      cond->transpile_to_cpp(), then_expr->transpile_to_cpp(),
                      else_expr->transpile_to_cpp());
+}
+std::vector<Instr> ConditionalExpr::gen_bytecode(SymTable &symtable) {
+  std::vector<Instr> instrs;
+  auto cond_code = cond->gen_bytecode(symtable);
+  instrs.insert(instrs.end(), cond_code.begin(), cond_code.end());
+  auto then_code = this->then_expr->gen_bytecode(symtable);
+  auto else_code = this->else_expr->gen_bytecode(symtable);
+  instrs.emplace_back(Jnz{.offset = (int64_t)else_code.size() + 1});
+  instrs.insert(instrs.end(), else_code.begin(), else_code.end());
+  instrs.emplace_back(Jmp{.offset = (int64_t)then_code.size()});
+  instrs.insert(instrs.end(), then_code.begin(), then_code.end());
+  return instrs;
 }

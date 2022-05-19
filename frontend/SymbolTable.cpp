@@ -68,7 +68,7 @@ tl::optional<Type> SymTable::get_expr_type(expr::Expr *exp) {
   }
   IF_IS_TYPE(call_expr, expr::CallExpr, exp) {
     IF_IS_TYPE(var_expr, expr::VarExpr, call_expr->callee.get()) {
-      this->get_symbol(var_expr->name.lexeme).and_then([](symbol_type &&sym) {
+      return this->get_symbol(var_expr->name.lexeme).and_then([](symbol_type &&sym) {
         return std::visit(
             overloaded{[&](FnStmt *fn) -> tl::optional<Type> {
                          return std::pair{fn->param_types, fn->return_type};
@@ -93,6 +93,42 @@ tl::optional<symbol_type> SymTable::get_symbol(const std::string &symbol) {
                      sym);
       if (symbol_name == symbol) {
         return sym;
+      }
+    }
+  }
+  return {};
+}
+
+tl::optional<int64_t> SymTable::get_symbol_offset(const std::string &symbol) {
+
+  auto it = std::find_if(
+      symbols.back().rbegin(), symbols.back().rend(), [&](symbol_type &sym) {
+        auto symbol_name = std::visit(
+            overloaded{
+                [&](FnStmt *fn) { return fn->name.lexeme; },
+                [&](LetStmt *let) { return let->name.lexeme; },
+                [&](DataDeclStmt *data) { return data->struct_name.lexeme; }},
+            sym);
+        return symbol_name == symbol;
+      });
+  if (it != symbols.back().rend()) {
+    return std::distance(it, symbols.back().rend() - 1);
+  }
+  auto cnt = 0;
+
+  for (auto &spn :
+       std::span(symbols).first(symbols.size() - 1) | std::views::reverse) {
+    for (symbol_type &sym : spn | std::views::reverse) {
+      cnt--;
+      auto symbol_name =
+          std::visit(overloaded{[&](FnStmt *fn) { return fn->name.lexeme; },
+                                [&](LetStmt *let) { return let->name.lexeme; },
+                                [&](DataDeclStmt *data) {
+                                  return data->struct_name.lexeme;
+                                }},
+                     sym);
+      if (symbol_name == symbol) {
+        return cnt;
       }
     }
   }

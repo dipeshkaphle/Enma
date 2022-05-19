@@ -65,6 +65,15 @@ SemanticChecker::traverse_scopes_and_check(expr::Expr *expr, SymTable &table) {
                           var_expr->name.lexeme, var_expr->name.line)
                   .c_str()));
     }
+    if (!std::holds_alternative<LetStmt *>(
+            table.get_symbol(var_expr->name.lexeme).value())) {
+      return tl::make_optional<SemanticChecker::semantic_error>(
+          SemanticChecker::semantic_error(
+              fmt::format(
+                  "Line {} : Symbol '{}' is not defined via let declaration",
+                  var_expr->name.line, var_expr->name.lexeme)
+                  .c_str()));
+    }
   }
 
   if (auto *cond_expr = dynamic_cast<expr::ConditionalExpr *>(expr);
@@ -149,6 +158,15 @@ SemanticChecker::traverse_scopes_and_check(expr::Expr *expr, SymTable &table) {
                 fmt::format("Undeclared symbol {} in line {}", var->name.lexeme,
                             var->name.line)
                     .c_str()));
+      }
+      if (!std::holds_alternative<FnStmt *>(
+              table.get_symbol(var->name.lexeme).value())) {
+        return tl::make_optional<
+            SemanticChecker::semantic_error>(SemanticChecker::semantic_error(
+            fmt::format(
+                "Line {} : Symbol '{}' is not a function, so can't be called",
+                var->name.line, var->name.lexeme)
+                .c_str()));
       }
     }
 

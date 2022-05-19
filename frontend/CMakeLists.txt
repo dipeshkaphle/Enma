@@ -11,6 +11,7 @@ target_sources(
           Statements.cpp
           SemanticCheck.cpp
           SymbolTable.cpp
+          InstructionPrinter.cpp
           Common.cpp)
 
 add_library(enma-interpreter-lib)

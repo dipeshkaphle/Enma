@@ -231,7 +231,10 @@ Parser::stmt_or_err Parser::statement() {
     return data_definition();
   }
   if (this->match({TokenType::IF})) {
-    return if_statement();
+    scope_nesting_count++;
+    auto if_stmt = if_statement();
+    scope_nesting_count--;
+    return if_stmt;
   }
   if (this->match({TokenType::WHILE})) {
     return this->while_statement();
@@ -255,7 +258,9 @@ Parser::stmt_or_err Parser::statement() {
     return this->return_statement();
   }
   if (this->match({TokenType::LEFT_BRACE})) {
+    scope_nesting_count++;
     auto maybe_stmts = this->block();
+    scope_nesting_count--;
     RETURN_IF_ERR(maybe_stmts);
     return std::make_unique<BlockStmt>(std::move(maybe_stmts.value()));
   }
@@ -313,7 +318,10 @@ Parser::stmt_or_err Parser::return_statement() {
 }
 Parser::stmt_or_err Parser::declaration() {
   if (match({TokenType::FN})) {
-    return this->fn_declaration("Function");
+    scope_nesting_count++;
+    auto fn = this->fn_declaration("Function");
+    scope_nesting_count--;
+    return fn;
   }
   if (match({TokenType::LET})) {
     return this->let_declaration();
@@ -321,6 +329,10 @@ Parser::stmt_or_err Parser::declaration() {
   return statement();
 }
 Parser::stmt_or_err Parser::fn_declaration(const std::string &type) {
+  if (scope_nesting_count != 1) {
+    return tl::make_unexpected<parse_error>(this->error(
+        this->previous(), "Function cant be defined outside of global scope"));
+  }
   auto maybe_name = consume(TokenType::IDENTIFIER,
                             fmt::format("Expected {} name.", type).c_str());
   RETURN_IF_ERR(maybe_name);

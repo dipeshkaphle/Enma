@@ -5,6 +5,7 @@
 #include <tl/to.hpp>
 // #include <tl/zip_transform.hpp>
 
+#include <deque>
 #include <iterator>
 
 Stmt::~Stmt() = default;
@@ -45,16 +46,34 @@ vector<std::string> BlockStmt::transpile_to_cpp() {
   // });
   // return output;
 }
+std::vector<Instr> BlockStmt::gen_bytecode(SymTable &symtable) {
+  symtable.push_frame();
+  std::vector<Instr> instrs;
+  for (auto &stmt : this->statements) {
+    auto codegen = stmt->gen_bytecode(symtable);
+    instrs.insert(instrs.end(), codegen.begin(), codegen.end());
+  }
+  symtable.pop_frame();
+  return instrs;
+}
 
 BreakStmt::BreakStmt() = default;
 string BreakStmt::to_sexp() const { return fmt::format("(break)"); }
 vector<std::string> BreakStmt::gen_intermediate() { return {"  break"}; }
 vector<std::string> BreakStmt::transpile_to_cpp() { return {"break;"}; }
+std::vector<Instr>
+BreakStmt::gen_bytecode([[maybe_unused]] SymTable &symtable) {
+  return {Break()};
+}
 
 ContinueStmt::ContinueStmt() = default;
 string ContinueStmt::to_sexp() const { return fmt::format("(continue)"); }
 vector<std::string> ContinueStmt::gen_intermediate() { return {"  continue"}; }
 vector<std::string> ContinueStmt::transpile_to_cpp() { return {"continue;"}; }
+std::vector<Instr>
+ContinueStmt::gen_bytecode([[maybe_unused]] SymTable &symtable) {
+  return {Continue()};
+}
 
 DataDeclStmt::DataDeclStmt(Token struct_name, std::vector<Token> names,
                            std::vector<Token> types)
@@ -79,6 +98,10 @@ string DataDeclStmt::to_sexp() const {
 }
 vector<std::string> DataDeclStmt::gen_intermediate() { return {}; }
 vector<std::string> DataDeclStmt::transpile_to_cpp() { return {}; }
+std::vector<Instr>
+DataDeclStmt::gen_bytecode([[maybe_unused]] SymTable &symtable) {
+  return {};
+}
 
 ExprStmt::ExprStmt(std::unique_ptr<Expr> expr) : expr(std::move(expr)) {}
 string ExprStmt::to_sexp() const { return fmt::format("{}", expr->to_sexp()); }
@@ -87,6 +110,9 @@ vector<std::string> ExprStmt::gen_intermediate() {
 }
 vector<std::string> ExprStmt::transpile_to_cpp() {
   return {fmt::format("{};", this->expr->transpile_to_cpp())};
+}
+std::vector<Instr> ExprStmt::gen_bytecode(SymTable &symtable) {
+  return this->expr->gen_bytecode(symtable);
 }
 
 FnStmt::FnStmt(Token fn_name, std::vector<Token> params,
@@ -126,9 +152,6 @@ vector<std::string> FnStmt::gen_intermediate() {
   return instrs;
 }
 vector<std::string> FnStmt::transpile_to_cpp() {
-
-  // return {};
-
   auto parameters = fmt::format(
       "{}", fmt::join(this->params |
                           std::views::transform([&, i = 0](auto &tok) mutable {
@@ -153,6 +176,38 @@ vector<std::string> FnStmt::transpile_to_cpp() {
       fmt::format("{{\n{}\n}};\n", fn_body)
 
   };
+}
+std::vector<Instr> FnStmt::gen_bytecode(SymTable &symtable) {
+  symtable.back().emplace_back(this);
+
+  std::deque<std::unique_ptr<LetStmt>> params_as_let_stmt;
+  std::ranges::transform(
+      this->params, std::back_inserter(params_as_let_stmt),
+      [&, i = 0](const Token &tok) mutable -> std::unique_ptr<LetStmt> {
+        return std::make_unique<LetStmt>(
+            tok,
+            Token(TokenType::IDENTIFIER, this->param_types[i], std::monostate(),
+                  tok.line),
+            std::make_unique<expr::LiteralExpr>(std::monostate()));
+      });
+
+  std::ranges::for_each(params_as_let_stmt,
+                        [&](std::unique_ptr<LetStmt> &param) {
+                          symtable.back().emplace_back(param.get());
+                        });
+  symtable.push_frame();
+
+  std::vector<Instr> instrs;
+  instrs.emplace_back(Lbl{.label_name = this->name.lexeme});
+  for (stmt_ptr &body_stmt : this->body) {
+    auto codegen = body_stmt->gen_bytecode(symtable);
+    instrs.insert(instrs.end(), codegen.begin(), codegen.end());
+  }
+  symtable.pop_frame();
+  std::ranges::for_each(params_as_let_stmt, [&](std::unique_ptr<LetStmt> &) {
+    symtable.back().pop_back();
+  });
+  return instrs;
 }
 
 IfStmt::IfStmt(std::unique_ptr<Expr> condition,
@@ -199,6 +254,21 @@ vector<std::string> IfStmt::transpile_to_cpp() {
                                         "\n"))
                         : "")};
 }
+std::vector<Instr> IfStmt::gen_bytecode(SymTable &symtable) {
+  // static int cnt = 0;
+  std::vector<Instr> instrs;
+  auto cond_code = this->condition->gen_bytecode(symtable);
+  instrs.insert(instrs.end(), cond_code.begin(), cond_code.end());
+  auto then_code = this->then_branch->gen_bytecode(symtable);
+  auto else_code = this->else_branch.has_value()
+                       ? this->else_branch.value()->gen_bytecode(symtable)
+                       : std::vector<Instr>{};
+  instrs.emplace_back(Jnz{.offset = (int64_t)else_code.size() + 1});
+  instrs.insert(instrs.end(), else_code.begin(), else_code.end());
+  instrs.emplace_back(Jmp{.offset = (int64_t)then_code.size()});
+  instrs.insert(instrs.end(), then_code.begin(), then_code.end());
+  return instrs;
+}
 
 LetStmt::LetStmt(Token name, std::optional<Token> type,
                  std::unique_ptr<Expr> expr)
@@ -221,6 +291,10 @@ vector<std::string> LetStmt::transpile_to_cpp() {
   return {fmt::format("{} {} = {};", this->type.value().lexeme,
                       this->name.lexeme,
                       this->initializer_expr->transpile_to_cpp())};
+}
+std::vector<Instr> LetStmt::gen_bytecode(SymTable &symtable) {
+  symtable.back().emplace_back(this);
+  return this->initializer_expr->gen_bytecode(symtable);
 }
 
 PrintStmt::PrintStmt(std::unique_ptr<Expr> expr, bool new_line)
@@ -246,6 +320,17 @@ vector<std::string> PrintStmt::transpile_to_cpp() {
   }
   return {fmt::format("cout<< {};", this->expr->transpile_to_cpp())};
 }
+std::vector<Instr> PrintStmt::gen_bytecode(SymTable &symtable) {
+  std::vector<Instr> instrs;
+  auto val_code = this->expr->gen_bytecode(symtable);
+  instrs.insert(instrs.end(), val_code.begin(), val_code.end());
+  instrs.emplace_back(Print());
+  if (this->has_newline) {
+    instrs.emplace_back(Push<char>{.val = '\n'});
+    instrs.emplace_back(Print());
+  }
+  return instrs;
+}
 
 ReturnStmt::ReturnStmt(Token keyword, std::optional<std::unique_ptr<Expr>> val)
     : keyword(std::move(keyword)), value(std::move(val)) {}
@@ -266,6 +351,16 @@ vector<std::string> ReturnStmt::transpile_to_cpp() {
   return {fmt::format(
       "return {};",
       this->value.has_value() ? this->value.value()->transpile_to_cpp() : "")};
+}
+std::vector<Instr> ReturnStmt::gen_bytecode(SymTable &symtable) {
+  std::vector<Instr> instrs;
+  if (this->value.has_value()) {
+    auto tmp = this->value.value().get();
+    auto val_code = tmp->gen_bytecode(symtable);
+    instrs.insert(instrs.end(), val_code.begin(), val_code.end());
+  }
+  instrs.emplace_back(Ret());
+  return instrs;
 }
 
 WhileStmt::WhileStmt(std::unique_ptr<Expr> condition,
@@ -315,4 +410,29 @@ vector<std::string> WhileStmt::gen_intermediate() {
 vector<std::string> WhileStmt::transpile_to_cpp() {
   return {fmt::format("while({})", this->condition->transpile_to_cpp()),
           fmt::format("{}", fmt::join(this->body->transpile_to_cpp(), "\n"))};
+}
+std::vector<Instr> WhileStmt::gen_bytecode(SymTable &symtable) {
+  std::vector<Instr> instrs;
+  auto cond_code = this->condition->gen_bytecode(symtable);
+  instrs.insert(instrs.end(), cond_code.begin(), cond_code.end());
+  auto block = this->body->gen_bytecode(symtable);
+  auto jnz = Jnz{.offset = 1};
+  auto jmp = Jmp{.offset = (int64_t)block.size() + 1};
+  instrs.emplace_back(jnz);
+  instrs.emplace_back(jmp);
+  std::transform(block.begin(), block.end(), block.begin(),
+                 [&, i = 0](Instr &inst) mutable -> Instr {
+                   i++;
+                   if (std::holds_alternative<Break>(inst)) {
+                     return Instr(Jmp{.offset = (int64_t)block.size() + 2 - i});
+                   }
+                   if (std::holds_alternative<Continue>(inst)) {
+                     return Instr(
+                         Jmp{.offset = -((int64_t)instrs.size() + i + 1)});
+                   }
+                   return inst;
+                 });
+  instrs.insert(instrs.end(), block.begin(), block.end());
+  instrs.emplace_back(Jmp{.offset = -((int64_t)instrs.size() + 1)});
+  return instrs;
 }

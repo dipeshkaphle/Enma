@@ -4,6 +4,8 @@
 #include "Instructions.hpp"
 #include "Lexer.hpp"
 
+struct SymTable;
+
 #include <memory>
 
 namespace expr {
@@ -19,6 +21,7 @@ public:
   [[nodiscard]] virtual string to_sexp() const = 0;
   [[nodiscard]] virtual std::vector<std::string> gen_intermediate() = 0;
   virtual std::string transpile_to_cpp() = 0;
+  virtual std::vector<Instr> gen_bytecode(SymTable &symtable) = 0;
 };
 
 struct BinaryExpr : public Expr {
@@ -29,6 +32,7 @@ struct BinaryExpr : public Expr {
   [[nodiscard]] string to_sexp() const override;
   std::vector<std::string> gen_intermediate() override;
   std::string transpile_to_cpp() override;
+  std::vector<Instr> gen_bytecode(SymTable &symtable) override;
 };
 
 struct PrefixExpr : public Expr {
@@ -38,6 +42,7 @@ struct PrefixExpr : public Expr {
   [[nodiscard]] string to_sexp() const override;
   std::vector<std::string> gen_intermediate() override;
   std::string transpile_to_cpp() override;
+  std::vector<Instr> gen_bytecode(SymTable &symtable) override;
 };
 
 struct AttrAccessExpr : public Expr {
@@ -49,6 +54,7 @@ struct AttrAccessExpr : public Expr {
   [[nodiscard]] string to_sexp() const override;
   std::vector<std::string> gen_intermediate() override;
   std::string transpile_to_cpp() override;
+  std::vector<Instr> gen_bytecode(SymTable &symtable) override;
 };
 
 struct VarExpr : public Expr {
@@ -58,6 +64,7 @@ struct VarExpr : public Expr {
   [[nodiscard]] string to_sexp() const override;
   std::vector<std::string> gen_intermediate() override;
   std::string transpile_to_cpp() override;
+  std::vector<Instr> gen_bytecode(SymTable &symtable) override;
 };
 
 struct LiteralExpr : public Expr {
@@ -68,6 +75,7 @@ struct LiteralExpr : public Expr {
   [[nodiscard]] string to_sexp() const override;
   std::vector<std::string> gen_intermediate() override;
   std::string transpile_to_cpp() override;
+  std::vector<Instr> gen_bytecode(SymTable &symtable) override;
 };
 
 struct CallExpr : public Expr {
@@ -79,6 +87,7 @@ struct CallExpr : public Expr {
   [[nodiscard]] string to_sexp() const override;
   std::vector<std::string> gen_intermediate() override;
   std::string transpile_to_cpp() override;
+  std::vector<Instr> gen_bytecode(SymTable &symtable) override;
 };
 
 struct AssignExpr : public Expr {
@@ -88,6 +97,7 @@ struct AssignExpr : public Expr {
   [[nodiscard]] string to_sexp() const override;
   std::vector<std::string> gen_intermediate() override;
   std::string transpile_to_cpp() override;
+  std::vector<Instr> gen_bytecode(SymTable &symtable) override;
 };
 
 struct ConditionalExpr : public Expr {
@@ -100,6 +110,7 @@ struct ConditionalExpr : public Expr {
   [[nodiscard]] string to_sexp() const override;
   std::vector<std::string> gen_intermediate() override;
   std::string transpile_to_cpp() override;
+  std::vector<Instr> gen_bytecode(SymTable &symtable) override;
 };
 
 } // namespace expr

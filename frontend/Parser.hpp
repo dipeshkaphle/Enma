@@ -83,6 +83,7 @@ private:
   std::vector<Token> tokens;
   int cur{0};
   int loop_nesting_count{0};
+  int scope_nesting_count{0};
 
   bool check(TokenType tk);
 

@@ -74,17 +74,30 @@ void run(const string &source, [[maybe_unused]] bool is_repl = false) {
   if (has_error) {
     return;
   }
+  // auto all_statements = std::move(checker.stmts);
+  // std::vector<std::string> instrs;
+  // for (auto &stmt : all_statements) {
+  // auto tmp = stmt->gen_intermediate();
+  // instrs.insert(instrs.end(), tmp.begin(), tmp.end());
+  // }
+  // fmt::print("=======================================\n");
+  // fmt::print("Intermediate Code\n");
+  // fmt::print("=======================================\n");
+  // for (auto &s : instrs)
+  // fmt::print("{}\n", s);
+
   auto all_statements = std::move(checker.stmts);
-  std::vector<std::string> instrs;
+  std::vector<Instr> instrs;
+  SymTable symtable;
   for (auto &stmt : all_statements) {
-    auto tmp = stmt->gen_intermediate();
-    instrs.insert(instrs.end(), tmp.begin(), tmp.end());
+    auto codegen = stmt->gen_bytecode(symtable);
+    fmt::print("{}\n", stmt->to_sexp());
+    instrs.insert(instrs.end(), codegen.begin(), codegen.end());
   }
-  fmt::print("=======================================\n");
-  fmt::print("Intermediate Code\n");
-  fmt::print("=======================================\n");
-  for (auto &s : instrs)
-    fmt::print("{}\n", s);
+  for (auto &instr : instrs) {
+    fmt::print("{}\n", to_string(instr));
+  }
+
   ofstream f("out.cpp");
 
   fmt::print(f, "#include <string>\n");
@@ -143,7 +156,7 @@ void runPrompt() {
 int main(int argc, char **argv) {
 
   // system("pwd");
-  // runFile("../../examples/continue_and_break.enma");
+  // runFile("../../examples/fib.enma");
   if (argc > 2) {
     fmt::print("Usage: enma-frontend [script]");
     exit(255);

@@ -2,6 +2,7 @@
 
 #include "Common.hpp"
 #include "Expression.hpp"
+#include "SymbolTable.hpp"
 
 #include <memory>
 #include <optional>
@@ -19,6 +20,7 @@ public:
   [[nodiscard]] virtual string to_sexp() const = 0;
   [[nodiscard]] virtual vector<std::string> gen_intermediate() = 0;
   [[nodiscard]] virtual vector<std::string> transpile_to_cpp() = 0;
+  [[nodiscard]] virtual vector<Instr> gen_bytecode(SymTable &symtable) = 0;
 };
 
 using stmt_ptr = std::unique_ptr<Stmt>;
@@ -32,18 +34,21 @@ struct BlockStmt : public Stmt {
   [[nodiscard]] string to_sexp() const override;
   [[nodiscard]] vector<std::string> gen_intermediate() override;
   vector<std::string> transpile_to_cpp() override;
+  vector<Instr> gen_bytecode(SymTable &symtable) override;
 };
 struct BreakStmt : public Stmt {
   BreakStmt();
   [[nodiscard]] string to_sexp() const override;
   [[nodiscard]] vector<std::string> gen_intermediate() override;
   vector<std::string> transpile_to_cpp() override;
+  vector<Instr> gen_bytecode(SymTable &symtable) override;
 };
 struct ContinueStmt : public Stmt {
   ContinueStmt();
   [[nodiscard]] string to_sexp() const override;
   [[nodiscard]] vector<std::string> gen_intermediate() override;
   vector<std::string> transpile_to_cpp() override;
+  vector<Instr> gen_bytecode(SymTable &symtable) override;
 };
 
 struct DataDeclStmt : public Stmt {
@@ -55,6 +60,7 @@ struct DataDeclStmt : public Stmt {
   [[nodiscard]] string to_sexp() const override;
   [[nodiscard]] vector<std::string> gen_intermediate() override;
   vector<std::string> transpile_to_cpp() override;
+  vector<Instr> gen_bytecode(SymTable &symtable) override;
 };
 
 struct ExprStmt : public Stmt {
@@ -63,6 +69,7 @@ struct ExprStmt : public Stmt {
   [[nodiscard]] string to_sexp() const override;
   [[nodiscard]] vector<std::string> gen_intermediate() override;
   vector<std::string> transpile_to_cpp() override;
+  vector<Instr> gen_bytecode(SymTable &symtable) override;
 };
 struct FnStmt : public Stmt {
   Token name;
@@ -78,6 +85,7 @@ struct FnStmt : public Stmt {
   [[nodiscard]] string to_sexp() const override;
   [[nodiscard]] vector<std::string> gen_intermediate() override;
   vector<std::string> transpile_to_cpp() override;
+  vector<Instr> gen_bytecode(SymTable &symtable) override;
 };
 struct IfStmt : public Stmt {
   std::unique_ptr<Expr> condition;
@@ -89,6 +97,7 @@ struct IfStmt : public Stmt {
   [[nodiscard]] string to_sexp() const override;
   [[nodiscard]] vector<std::string> gen_intermediate() override;
   vector<std::string> transpile_to_cpp() override;
+  vector<Instr> gen_bytecode(SymTable &symtable) override;
 };
 struct LetStmt : public Stmt {
   Token name;
@@ -98,6 +107,7 @@ struct LetStmt : public Stmt {
   [[nodiscard]] string to_sexp() const override;
   [[nodiscard]] vector<std::string> gen_intermediate() override;
   vector<std::string> transpile_to_cpp() override;
+  vector<Instr> gen_bytecode(SymTable &symtable) override;
 };
 struct PrintStmt : public Stmt {
   std::unique_ptr<Expr> expr;
@@ -106,6 +116,7 @@ struct PrintStmt : public Stmt {
   [[nodiscard]] string to_sexp() const override;
   [[nodiscard]] vector<std::string> gen_intermediate() override;
   vector<std::string> transpile_to_cpp() override;
+  vector<Instr> gen_bytecode(SymTable &symtable) override;
 };
 struct ReturnStmt : public Stmt {
   Token keyword;
@@ -115,6 +126,7 @@ struct ReturnStmt : public Stmt {
   [[nodiscard]] string to_sexp() const override;
   [[nodiscard]] vector<std::string> gen_intermediate() override;
   vector<std::string> transpile_to_cpp() override;
+  vector<Instr> gen_bytecode(SymTable &symtable) override;
 };
 struct WhileStmt : public Stmt {
   std::unique_ptr<Expr> condition;
@@ -126,4 +138,5 @@ struct WhileStmt : public Stmt {
   [[nodiscard]] string to_sexp() const override;
   [[nodiscard]] vector<std::string> gen_intermediate() override;
   vector<std::string> transpile_to_cpp() override;
+  vector<Instr> gen_bytecode(SymTable &symtable) override;
 };
