@@ -186,7 +186,7 @@ std::vector<Instr> CallExpr::gen_bytecode(SymTable &symtable) {
   }
   // TODO : lambda expression if they're added
   auto fn = dynamic_cast<VarExpr *>(this->callee.get());
-  instrs.emplace_back(Call{.label = fn->name.lexeme});
+  instrs.emplace_back(Call{.label = fmt::format("\"{}\"", fn->name.lexeme)});
   return instrs;
 }
 

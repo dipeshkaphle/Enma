@@ -40,12 +40,14 @@ void run(const string &source, [[maybe_unused]] bool is_repl = false) {
     return;
   }
 
+#ifdef DEBUG
   fmt::print("=======================================\n");
   fmt::print("S-Expression\n");
   fmt::print("=======================================\n");
   std::ranges::for_each(stmnts, [](auto &stmnt) {
     fmt::print("{}\n\n", stmnt.value()->to_sexp());
   });
+#endif
 
   std::deque<stmt_ptr> stmts_without_err;
 
@@ -91,11 +93,11 @@ void run(const string &source, [[maybe_unused]] bool is_repl = false) {
   SymTable symtable;
   for (auto &stmt : all_statements) {
     auto codegen = stmt->gen_bytecode(symtable);
-    fmt::print("{}\n", stmt->to_sexp());
     instrs.insert(instrs.end(), codegen.begin(), codegen.end());
   }
+  ofstream bytecode_out("out.bytecode");
   for (auto &instr : instrs) {
-    fmt::print("{}\n", to_string(instr));
+    fmt::print(bytecode_out, "{}\n", to_string(instr));
   }
 
   ofstream f("out.cpp");

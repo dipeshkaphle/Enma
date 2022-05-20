@@ -198,7 +198,8 @@ std::vector<Instr> FnStmt::gen_bytecode(SymTable &symtable) {
   symtable.push_frame();
 
   std::vector<Instr> instrs;
-  instrs.emplace_back(Lbl{.label_name = this->name.lexeme});
+  instrs.emplace_back(
+      Lbl{.label_name = fmt::format("\"{}\"", this->name.lexeme)});
   for (stmt_ptr &body_stmt : this->body) {
     auto codegen = body_stmt->gen_bytecode(symtable);
     instrs.insert(instrs.end(), codegen.begin(), codegen.end());
