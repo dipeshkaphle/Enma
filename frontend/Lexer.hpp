@@ -24,6 +24,7 @@ class Lexer {
   size_t cur_line = 1;
   using tok = TokenType;
   static const unordered_map<string, TokenType> keywords;
+
   /*
    * tells us if we're still in bounds or not
    */
@@ -74,6 +75,10 @@ class Lexer {
   void multiline_comment();
 
 public:
+  static inline std::unordered_map<char, char> valid_escapes{
+      {'\'', 0x27}, {'"', 0x22}, {'?', 0x3f}, {'\\', 0x5c},
+      {'a', 0x07},  {'b', 0x08}, {'f', 0x0c}, {'n', 0x0a},
+      {'r', 0x0d},  {'t', 0x09}, {'v', 0x0b}};
   explicit Lexer(string source);
 
   /*

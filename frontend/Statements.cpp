@@ -204,10 +204,14 @@ std::vector<Instr> FnStmt::gen_bytecode(SymTable &symtable) {
     auto codegen = body_stmt->gen_bytecode(symtable);
     instrs.insert(instrs.end(), codegen.begin(), codegen.end());
   }
+  instrs.emplace_back(Ret());
   symtable.pop_frame();
   std::ranges::for_each(params_as_let_stmt, [&](std::unique_ptr<LetStmt> &) {
     symtable.back().pop_back();
   });
+
+  auto sz = (int64_t)instrs.size();
+  instrs.insert(instrs.begin(), Jmp{.offset = sz});
   return instrs;
 }
 
@@ -327,7 +331,7 @@ std::vector<Instr> PrintStmt::gen_bytecode(SymTable &symtable) {
   instrs.insert(instrs.end(), val_code.begin(), val_code.end());
   instrs.emplace_back(Print());
   if (this->has_newline) {
-    instrs.emplace_back(Push<char>{.val = '\n'});
+    instrs.emplace_back(Push<std::string>{.val = "\n"});
     instrs.emplace_back(Print());
   }
   return instrs;

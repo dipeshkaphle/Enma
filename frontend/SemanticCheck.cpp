@@ -168,12 +168,33 @@ SemanticChecker::traverse_scopes_and_check(expr::Expr *expr, SymTable &table) {
                 var->name.line, var->name.lexeme)
                 .c_str()));
       }
-    }
-
-    for (auto &exp : call_expr->arguments) {
-      auto res = traverse_scopes_and_check(exp.get(), table);
-      if (res.has_value()) {
-        return res;
+      auto *fnstmt =
+          std::get<FnStmt *>(table.get_symbol(var->name.lexeme).value());
+      if (fnstmt->params.size() != call_expr->arguments.size()) {
+        return tl::make_optional<SemanticChecker::semantic_error>(
+            fmt::format("Expected {} params, got {} in line {}",
+                        fnstmt->params.size(), call_expr->arguments.size(),
+                        call_expr->paren.line)
+                .c_str());
+      }
+      size_t index = 0;
+      auto &types =
+          std::get<FnStmt *>(table.get_symbol(var->name.lexeme).value())
+              ->param_types;
+      for (auto &exp : call_expr->arguments) {
+        auto res = traverse_scopes_and_check(exp.get(), table);
+        if (res.has_value()) {
+          return res;
+        }
+        if (tl::optional<Type>(types[index]) !=
+            table.get_expr_type(exp.get())) {
+          return tl::make_optional<SemanticChecker::semantic_error>(
+              fmt::format(
+                  "Type mismatch, Expect {} for param no. {} in line {}",
+                  types[index], index, call_expr->paren.line)
+                  .c_str());
+        }
+        index++;
       }
     }
   }

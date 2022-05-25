@@ -60,10 +60,6 @@ void Lexer::add_token(TokenType type, const literal_type &literal) {
 
 std::string Lexer::parse_with_escapes(string_view s) const {
   // https://en.cppreference.com/w/cpp/language/escape
-  std::unordered_map<char, char> valid_escapes{
-      {'\'', 0x27}, {'"', 0x22}, {'?', 0x3f}, {'\\', 0x5c},
-      {'a', 0x07},  {'b', 0x08}, {'f', 0x0c}, {'n', 0x0a},
-      {'r', 0x0d},  {'t', 0x09}, {'v', 0x0b}};
 
   auto it = s.begin();
   string result;

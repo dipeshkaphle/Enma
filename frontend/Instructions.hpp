@@ -39,6 +39,7 @@ struct Lbl {
 };
 struct Call {
   std::string label;
+  int arg_cnt;
 };
 struct BinOp {
   std::string op;
