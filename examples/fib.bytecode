@@ -1,0 +1,25 @@
+Jmp 19
+Label "fib"
+Ref -1
+PushI 2
+BinOp "<="
+Jnz 1
+Jmp 2
+PushI 1
+Ret 1
+Ref -1
+PushI 1
+BinOp "-"
+Call "fib" 1
+Ref -1
+PushI 2
+BinOp "-"
+Call "fib" 1
+BinOp "+"
+Ret 1
+Ret 0
+PushI 30
+Call "fib" 1
+Print
+PushS "\n"
+Print

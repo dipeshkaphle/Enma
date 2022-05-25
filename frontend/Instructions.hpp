@@ -27,7 +27,9 @@ struct Not {};
 struct And {};
 struct Or {};
 struct Print {};
-struct Ret {};
+struct Ret {
+  bool pop;
+};
 struct Jnz {
   int64_t offset;
 };

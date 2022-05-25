@@ -47,13 +47,17 @@ vector<std::string> BlockStmt::transpile_to_cpp() {
   // return output;
 }
 std::vector<Instr> BlockStmt::gen_bytecode(SymTable &symtable) {
-  symtable.push_frame();
+  // symtable.push_frame();
+  auto len = symtable.back().size();
   std::vector<Instr> instrs;
   for (auto &stmt : this->statements) {
     auto codegen = stmt->gen_bytecode(symtable);
     instrs.insert(instrs.end(), codegen.begin(), codegen.end());
   }
-  symtable.pop_frame();
+  while (symtable.back().size() != len) {
+    symtable.back().pop_back();
+  }
+  // symtable.pop_frame();
   return instrs;
 }
 
@@ -204,7 +208,7 @@ std::vector<Instr> FnStmt::gen_bytecode(SymTable &symtable) {
     auto codegen = body_stmt->gen_bytecode(symtable);
     instrs.insert(instrs.end(), codegen.begin(), codegen.end());
   }
-  instrs.emplace_back(Ret());
+  instrs.emplace_back(Ret{.pop = false});
   symtable.pop_frame();
   std::ranges::for_each(params_as_let_stmt, [&](std::unique_ptr<LetStmt> &) {
     symtable.back().pop_back();
@@ -299,7 +303,10 @@ vector<std::string> LetStmt::transpile_to_cpp() {
 }
 std::vector<Instr> LetStmt::gen_bytecode(SymTable &symtable) {
   symtable.back().emplace_back(this);
-  return this->initializer_expr->gen_bytecode(symtable);
+  auto instrs = this->initializer_expr->gen_bytecode(symtable);
+  // instrs.emplace_back(
+  // Load{.offset = symtable.get_symbol_offset(this->name.lexeme).value()});
+  return instrs;
 }
 
 PrintStmt::PrintStmt(std::unique_ptr<Expr> expr, bool new_line)
@@ -363,8 +370,10 @@ std::vector<Instr> ReturnStmt::gen_bytecode(SymTable &symtable) {
     auto tmp = this->value.value().get();
     auto val_code = tmp->gen_bytecode(symtable);
     instrs.insert(instrs.end(), val_code.begin(), val_code.end());
+    instrs.emplace_back(Ret{.pop = true});
+  } else {
+    instrs.emplace_back(Ret{.pop = false});
   }
-  instrs.emplace_back(Ret());
   return instrs;
 }
 

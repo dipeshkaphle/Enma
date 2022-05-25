@@ -106,15 +106,34 @@ SemanticChecker::traverse_scopes_and_check(expr::Expr *expr, SymTable &table) {
           return traverse_scopes_and_check(bin_expr->right.get(), table);
         })
         .or_else([&]() -> tl::optional<SemanticChecker::semantic_error> {
-          if (table.get_expr_type(bin_expr->left.get()) !=
-              table.get_expr_type(bin_expr->right.get())) {
-            return SemanticChecker::semantic_error(
-                fmt::format("Type of lhs != Type of rhs in "
-                            "BinaryExpr in line {}",
-                            bin_expr->op.line)
-                    .c_str());
+          auto l_type = table.get_expr_type(bin_expr->left.get());
+          auto r_type = table.get_expr_type(bin_expr->right.get());
+
+          // using Type = std::variant<std::pair<std::vector<type_t>, type_t>,
+          // type_t>;
+          if (l_type.has_value() && r_type.has_value()) {
+            auto actual_l_type = std::visit(
+                overloaded{[&](type_t &t) { return t; },
+                           [&](std::pair<std::vector<type_t>, type_t> &t) {
+                             return t.second;
+                           }},
+                l_type.value());
+            auto actual_r_type = std::visit(
+                overloaded{[&](type_t &t) { return t; },
+                           [&](std::pair<std::vector<type_t>, type_t> &t) {
+                             return t.second;
+                           }},
+                r_type.value());
+            if (actual_l_type == actual_r_type) {
+              return {};
+            }
           }
-          return {};
+
+          return SemanticChecker::semantic_error(
+              fmt::format("Type of lhs != Type of rhs in "
+                          "BinaryExpr in line {}",
+                          bin_expr->op.line)
+                  .c_str());
         });
   }
   // TODO

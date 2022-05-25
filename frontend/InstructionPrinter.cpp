@@ -35,7 +35,7 @@ std::string to_string(Instr &instr) {
           [&](BinOp &val) { return fmt::format("BinOp \"{}\"", val.op); },
           [&](PrefixOp &val) { return fmt::format("PrefixOp \"{}\"", val.op); },
           [&](Print &) { return fmt::format("Print"); },
-          [&](Ret &) { return fmt::format("Ret"); },
+          [&](Ret &val) { return fmt::format("Ret {}", val.pop ? 1 : 0); },
           [&](Call &val) {
             return fmt::format("Call {} {}", val.label, val.arg_cnt);
           },

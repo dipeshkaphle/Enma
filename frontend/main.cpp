@@ -16,7 +16,8 @@ using std::string;
 using std::string_view;
 using namespace std;
 
-void run(const string &source, [[maybe_unused]] bool is_repl = false) {
+void run(const string &source, [[maybe_unused]] bool is_repl = false,
+         [[maybe_unused]] const char *outfilename = "out") {
   Lexer scanner(source);
   std::vector<Token> tokens = scanner.scan_tokens();
   if (Error::hadError) {
@@ -95,35 +96,43 @@ void run(const string &source, [[maybe_unused]] bool is_repl = false) {
     auto codegen = stmt->gen_bytecode(symtable);
     instrs.insert(instrs.end(), codegen.begin(), codegen.end());
   }
-  ofstream bytecode_out("out.bytecode");
-  for (auto &instr : instrs) {
-    fmt::print(bytecode_out, "{}\n", to_string(instr));
+
+  if (!is_repl) {
+    ofstream bytecode_out(fmt::format("{}.bytecode", outfilename).c_str());
+    for (auto &instr : instrs) {
+      fmt::print(bytecode_out, "{}\n", to_string(instr));
+    }
+  } else {
+    for (auto &instr : instrs) {
+      fmt::print("{}\n", to_string(instr));
+    }
   }
 
-  ofstream f("out.cpp");
+  if (!is_repl) {
+    ofstream f(fmt::format("{}.cpp", outfilename).c_str());
 
-  fmt::print(f, "#include <string>\n");
-  fmt::print(f, "#include <iostream>\n");
-  fmt::print(f, "#include <functional>\n");
-  fmt::print(f, "using namespace std;\n");
-  fmt::print(f, "int main(){{\n");
-  for (auto &s : all_statements) {
-    fmt::print(f, "{}\n", fmt::join(s->transpile_to_cpp(), "\n"));
+    fmt::print(f, "#include <string>\n");
+    fmt::print(f, "#include <iostream>\n");
+    fmt::print(f, "#include <functional>\n");
+    fmt::print(f, "using namespace std;\n");
+    fmt::print(f, "int main(){{\n");
+    for (auto &s : all_statements) {
+      fmt::print(f, "{}\n", fmt::join(s->transpile_to_cpp(), "\n"));
+    }
+    fmt::print(f, "}}\n");
+    f.close();
+    system(fmt::format("clang-format -i {}.cpp", outfilename).c_str());
   }
-  fmt::print(f, "}}\n");
-  f.close();
-
-  system("clang-format -i out.cpp");
 }
 
-void runFile(const char *filename) {
+void runFile(const char *filename, const char *outfilename) {
   std::ifstream inp(filename);
 
   if (inp.is_open()) {
     string all_code((std::istreambuf_iterator<char>(inp)),
                     (std::istreambuf_iterator<char>()));
     try {
-      run(all_code, false);
+      run(all_code, false, outfilename);
     } catch (std::exception &e) {
       fmt::print(std::cerr, "Exception: {}", e.what());
     }
@@ -159,11 +168,11 @@ int main(int argc, char **argv) {
 
   // system("pwd");
   // runFile("../../examples/fib.enma");
-  if (argc > 2) {
-    fmt::print("Usage: enma-frontend [script]");
+  if (argc > 3) {
+    fmt::print("Usage: enma-frontend [script] [output-file-name]");
     exit(255);
-  } else if (argc == 2) {
-    runFile(argv[1]);
+  } else if (argc >= 2) {
+    runFile(argv[1], argc >= 3 ? argv[2] : "out");
   } else {
     runPrompt();
   }

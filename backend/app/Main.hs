@@ -2,8 +2,9 @@ module Main where
 
 import Control.Monad.State
 import qualified Data.Foldable as List
-import Data.Int (Int64)
+import Data.Int (Int64, Int8)
 import qualified Data.Vector as Vector
+import System.Environment
 
 data Instr
   = PushI Int64
@@ -16,7 +17,7 @@ data Instr
   | BinOp String
   | PrefixOp String
   | Print
-  | Ret
+  | Ret Int8
   | Call String Int
   | Jmp Int64
   | Jnz Int64
@@ -29,7 +30,7 @@ data Data
   | B Bool
   | C Char
   | S String
-  | Err
+  | Err String
 
 instance Show Data where
   show (I i) = show i
@@ -37,7 +38,7 @@ instance Show Data where
   show (B b) = show b
   show (C c) = show c
   show (S s) = s
-  show Err = "Type Error"
+  show (Err s) = "Error : " ++ s
 
 -- binApply :: (a -> a -> a) -> Data -> Data -> Data
 -- binApply f (I i) (I j) = I (f i j)
@@ -65,6 +66,11 @@ isLabel i = case i of
 extractLabelName (i, Label x) = (i, x)
 
 getLabelAddr label = List.find (\(i, l) -> l == label)
+
+actualIndex :: Int -> State MachineState Int
+actualIndex i = do
+  st <- get
+  return $ stackLen st - (i + 1)
 
 changeValAt i lst newVal =
   let (x, _ : xs) = Prelude.splitAt i lst
@@ -102,7 +108,8 @@ emulate instr = do
       put $ st {stack = S s : stack st, stackLen = stackLen st + 1}
       return Nothing
     Load i -> do
-      let newStack = tail (changeValAt (head (fp st) + fromIntegral i) (stack st) (head $ stack st))
+      index <- actualIndex (head (fp st) + fromIntegral i)
+      let newStack = tail (changeValAt index (stack st) (head $ stack st))
       put st {stack = newStack, stackLen = stackLen st - 1}
       return Nothing
     Ref i -> do
@@ -116,12 +123,72 @@ emulate instr = do
       let newSt = (tail . tail . stack) st
       let newTop =
             case (lhs, rhs) of
-              (I i, I j) -> Err
-              (D i, D j) -> Err
-              (C i, C j) -> Err
-              (B i, B j) -> Err
-              (S i, S j) -> Err
-              _ -> Err
+              (I i, I j) ->
+                case o of
+                  "+" -> I (i + j)
+                  "-" -> I (i - j)
+                  "*" -> I (i * j)
+                  "/" -> I (div i j)
+                  "!=" -> B (i /= j)
+                  "==" -> B (i == j)
+                  ">" -> B (i > j)
+                  ">=" -> B (i >= j)
+                  "<" -> B (i < j)
+                  "<=" -> B (i <= j)
+                  _ -> Err $ "Invalid Operator : " ++ o ++ " used on two int"
+              (D i, D j) ->
+                case o of
+                  "+" -> D (i + j)
+                  "-" -> D (i - j)
+                  "*" -> D (i * j)
+                  "/" -> D (i / j)
+                  "!=" -> B (i /= j)
+                  "==" -> B (i == j)
+                  ">" -> B (i > j)
+                  ">=" -> B (i >= j)
+                  "<" -> B (i < j)
+                  "<=" -> B (i <= j)
+                  _ -> Err $ "Invalid Operator : " ++ o ++ " used on two double"
+              (C i, C j) ->
+                case o of
+                  "+" -> S (show i ++ show j)
+                  "!=" -> B (i /= j)
+                  "==" -> B (i == j)
+                  ">" -> B (i > j)
+                  ">=" -> B (i >= j)
+                  "<" -> B (i < j)
+                  "<=" -> B (i <= j)
+                  _ -> Err $ "Invalid Operator : " ++ o ++ " used on two char"
+              (B i, B j) ->
+                case o of
+                  "!=" -> B (i /= j)
+                  "==" -> B (i == j)
+                  ">" -> B (i > j)
+                  ">=" -> B (i >= j)
+                  "<" -> B (i < j)
+                  "<=" -> B (i <= j)
+                  "and" -> B (i && j)
+                  "or" -> B (i || j)
+                  _ -> Err $ "Invalid Operator : " ++ o ++ " used on two bool"
+              (S i, S j) ->
+                case o of
+                  "+" -> S (i ++ j)
+                  "!=" -> B (i /= j)
+                  "==" -> B (i == j)
+                  ">" -> B (i > j)
+                  ">=" -> B (i >= j)
+                  "<" -> B (i < j)
+                  "<=" -> B (i <= j)
+                  _ -> Err $ "Invalid Operator : " ++ o ++ " used on two string"
+              _ ->
+                Err $
+                  "Type mismatch in lhs and rhs: lhs is "
+                    ++ show lhs
+                    ++ " ,rhs is "
+                    ++ show rhs
+                    ++ " ,and op is "
+                    ++ o
+      put st {stack = newTop : (tail . tail . stack) st, stackLen = stackLen st - 1}
       return Nothing
     PrefixOp o -> do
       let rhs = (head . stack) st
@@ -131,30 +198,33 @@ emulate instr = do
               I i ->
                 case o of
                   "-" -> I (- i)
-                  _ -> Err
+                  _ -> Err $ "Invalid operator : " ++ o ++ " used on int"
               D d ->
                 case o of
                   "-" -> D (- d)
-                  _ -> Err
+                  _ -> Err $ "Invalid operator : " ++ o ++ " used on double"
               B b ->
                 case o of
                   "!" -> B (not b)
-                  _ -> Err
-              _ -> Err
+                  _ -> Err $ "Invalid operator : " ++ o ++ " used on bool"
+              _ -> Err $ show rhs ++ " doesnt support any unary operator, Operator used : " ++ o
       put st {stack = newTop : (tail . stack) st}
       return Nothing
     Print -> do
       let top = (head . stack) st
       put $ st {stack = (tail . stack) st, stackLen = stackLen st - 1}
       return $ Just top
-    Ret -> do
+    Ret yes -> do
       let newFp = (tail . fp) st
       let newIp = (head . retAddr) st
       put
         st
           { ip = newIp,
             fp = newFp,
-            stack = drop ((head . argsCnt) st) (stack st),
+            stack =
+              if yes == 1
+                then (head . stack) st : drop ((head . argsCnt) st) ((tail . stack) st)
+                else drop ((head . argsCnt) st) (stack st),
             argsCnt = (tail . argsCnt) st,
             stackLen = stackLen st - (head . argsCnt) st,
             retAddr = (tail . retAddr) st
@@ -177,14 +247,16 @@ emulate instr = do
               D d -> d /= 0
               I i -> i /= 0
               _ -> False
+      let newStack = (tail . stack) st
+      let newLen = stackLen st - 1
       if jump
         then
           ( do
-              put $ st {ip = ip st + fromIntegral off}
+              put $ st {ip = ip st + fromIntegral off, stack = newStack, stackLen = newLen}
           )
         else
           ( do
-              put st
+              put st {stack = newStack, stackLen = newLen}
           )
       return Nothing
     Label l ->
@@ -201,8 +273,16 @@ emulateAllInstrs instrs state = do
       -- putStrLn $ show state
       case a of
         Just x -> do
-          putStr $ show x
-          emulateAllInstrs instrs newState
+          -- putStr $ show x
+          case x of
+            Err e -> do
+              print $ "Error!!!" ++ show x
+              return ()
+            _ -> do
+              -- putStrLn "================="
+              putStr $ show x
+              -- putStrLn "================="
+              emulateAllInstrs instrs newState
         Nothing -> do
           emulateAllInstrs instrs newState
     Nothing -> do
@@ -210,9 +290,15 @@ emulateAllInstrs instrs state = do
 
 main :: IO ()
 main = do
-  file <- readFile "../build/out.bytecode"
-  let allLines = lines file
-  let instrs = Vector.fromList $ Prelude.map (\x -> read x :: Instr) allLines
-  let allLabels = Vector.toList $ Vector.map extractLabelName $ Vector.filter isLabel (Vector.indexed instrs)
-  let state = MachineState {fp = [0], ip = 0, stack = [], stackLen = 0, retAddr = [], allLabels = allLabels, argsCnt = []}
-  emulateAllInstrs instrs state
+  -- file <- readFile "../build/out.bytecode"
+  args <- getArgs
+  case args of
+    [] -> do
+      putStrLn "Please Provide Arguments : <this-binary-name> <input-file>"
+    x : _ -> do
+      file <- readFile x
+      let allLines = lines file
+      let instrs = Vector.fromList $ Prelude.map (\x -> read x :: Instr) allLines
+      let allLabels = Vector.toList $ Vector.map extractLabelName $ Vector.filter isLabel (Vector.indexed instrs)
+      let state = MachineState {fp = [0], ip = 0, stack = [], stackLen = 0, retAddr = [], allLabels = allLabels, argsCnt = []}
+      emulateAllInstrs instrs state

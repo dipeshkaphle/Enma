@@ -179,6 +179,11 @@ expr_or_err Parser::expression(int binding_power) {
                     return std::make_unique<AttrAccessExpr>(
                         std::move(op), std::move(lhs), std::move(rhs));
                   }
+                  if (op.type == TokenType::EQUAL) {
+                    auto *lhs_as_var_expr = dynamic_cast<VarExpr *>(lhs.get());
+                    return std::make_unique<AssignExpr>(lhs_as_var_expr->name,
+                                                        std::move(rhs));
+                  }
                   return std::make_unique<BinaryExpr>(
                       std::move(op), std::move(lhs), std::move(rhs));
                 });
