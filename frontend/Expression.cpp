@@ -180,14 +180,19 @@ std::string CallExpr::transpile_to_cpp() {
 std::vector<Instr> CallExpr::gen_bytecode(SymTable &symtable) {
   // symtable.back().push
   std::vector<Instr> instrs;
+  int64_t off = symtable.back().size();
   for (auto &arg : this->arguments) {
     auto arg_bytecode = arg->gen_bytecode(symtable);
     instrs.insert(instrs.end(), arg_bytecode.begin(), arg_bytecode.end());
+    instrs.emplace_back(Load{.offset = off++});
   }
   // TODO : lambda expression if they're added
   auto *fn = dynamic_cast<VarExpr *>(this->callee.get());
   instrs.emplace_back(Call{.label = fmt::format("\"{}\"", fn->name.lexeme),
                            .arg_cnt = (int)this->arguments.size()});
+  // if (symtable.get_final_expr_type(this) != "void") {
+  // symtable.back().emplace_back(std::monostate());
+  // }
   return instrs;
 }
 

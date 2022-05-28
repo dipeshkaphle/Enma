@@ -1,6 +1,8 @@
 #include "SymbolTable.hpp"
 #include "Statements.hpp"
 
+#include <tl/to.hpp>
+
 #include <iterator>
 #include <ranges>
 
@@ -68,14 +70,15 @@ tl::optional<Type> SymTable::get_expr_type(expr::Expr *exp) {
   }
   IF_IS_TYPE(call_expr, expr::CallExpr, exp) {
     IF_IS_TYPE(var_expr, expr::VarExpr, call_expr->callee.get()) {
-      return this->get_symbol(var_expr->name.lexeme).and_then([](symbol_type &&sym) {
-        return std::visit(
-            overloaded{[&](FnStmt *fn) -> tl::optional<Type> {
-                         return std::pair{fn->param_types, fn->return_type};
-                       },
-                       [&](auto) -> tl::optional<Type> { return {}; }},
-            sym);
-      });
+      return this->get_symbol(var_expr->name.lexeme)
+          .and_then([](symbol_type &&sym) {
+            return std::visit(
+                overloaded{[&](FnStmt *fn) -> tl::optional<Type> {
+                             return std::pair{fn->param_types, fn->return_type};
+                           },
+                           [&](auto) -> tl::optional<Type> { return {}; }},
+                sym);
+          });
     }
     return {};
   }
@@ -89,7 +92,8 @@ tl::optional<symbol_type> SymTable::get_symbol(const std::string &symbol) {
                                 [&](LetStmt *let) { return let->name.lexeme; },
                                 [&](DataDeclStmt *data) {
                                   return data->struct_name.lexeme;
-                                }},
+                                },
+                                [&](auto) { return std::string{}; }},
                      sym);
       if (symbol_name == symbol) {
         return sym;
@@ -107,7 +111,8 @@ tl::optional<int64_t> SymTable::get_symbol_offset(const std::string &symbol) {
             overloaded{
                 [&](FnStmt *fn) { return fn->name.lexeme; },
                 [&](LetStmt *let) { return let->name.lexeme; },
-                [&](DataDeclStmt *data) { return data->struct_name.lexeme; }},
+                [&](DataDeclStmt *data) { return data->struct_name.lexeme; },
+                [&](auto) { return std::string{}; }},
             sym);
         return symbol_name == symbol;
       });
@@ -120,17 +125,28 @@ tl::optional<int64_t> SymTable::get_symbol_offset(const std::string &symbol) {
        std::span(symbols).first(symbols.size() - 1) | std::views::reverse) {
     for (symbol_type &sym : spn | std::views::reverse) {
       cnt--;
-      auto symbol_name =
-          std::visit(overloaded{[&](FnStmt *fn) { return fn->name.lexeme; },
-                                [&](LetStmt *let) { return let->name.lexeme; },
-                                [&](DataDeclStmt *data) {
-                                  return data->struct_name.lexeme;
-                                }},
-                     sym);
+      auto symbol_name = std::visit(
+          overloaded{[&](FnStmt *fn) { return fn->name.lexeme; },
+                     [&](LetStmt *let) { return let->name.lexeme; },
+                     [&](DataDeclStmt *d) { return d->struct_name.lexeme; },
+                     [&](auto) { return std::string{}; }
+
+          },
+          sym);
       if (symbol_name == symbol) {
         return cnt;
       }
     }
   }
   return {};
+}
+
+tl::optional<type_t> SymTable::get_final_expr_type(expr::Expr *exp) {
+  return get_expr_type(exp).and_then([&](Type &&t) {
+    return std::visit(
+        overloaded{[&](const type_t &x) -> tl::optional<type_t> { return x; },
+                   [&](const std::pair<std::vector<type_t>, type_t> &x)
+                       -> tl::optional<type_t> { return x.second; }},
+        t);
+  });
 }

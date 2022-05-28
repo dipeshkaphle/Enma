@@ -1,0 +1,89 @@
+PushFn "sum"
+Jmp 22
+Label "sum"
+PushI 0
+Load 0
+PushI 0
+Load 1
+Ref 0
+Ref -1
+BinOp "<="
+Jnz 1
+Jmp 9
+Ref 1
+Ref 0
+BinOp "+"
+Load 1
+Ref 0
+PushI 1
+BinOp "+"
+Load 0
+Jmp -14
+Ref 1
+Ret
+Ret
+PushFn "fib"
+Jmp 21
+Label "fib"
+Ref -1
+PushI 1
+BinOp "<="
+Jnz 1
+Jmp 2
+Ref -1
+Ret
+Ref -1
+PushI 1
+BinOp "-"
+Load 0
+Call "fib" 1
+Ref -1
+PushI 2
+BinOp "-"
+Load 0
+Call "fib" 1
+BinOp "+"
+Ret
+Ret
+PushS "sum(1): "
+Print
+PushI 1
+Load 2
+Call "sum" 1
+Print
+PushS "\n"
+Print
+PushS "sum(4): "
+Print
+PushI 4
+Load 2
+Call "sum" 1
+Print
+PushS "\n"
+Print
+PushI 10
+Load 2
+PushI 1
+Load 3
+Ref 3
+Ref 2
+BinOp "<="
+Jnz 1
+Jmp 17
+PushS "fib("
+Print
+Ref 3
+Print
+PushS "): "
+Print
+Ref 3
+Load 4
+Call "fib" 1
+Print
+PushS "\n"
+Print
+Ref 3
+PushI 1
+BinOp "+"
+Load 3
+Jmp -22

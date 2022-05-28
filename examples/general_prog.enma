@@ -1,0 +1,31 @@
+fn sum(n: int ): int  {
+	let i : int = 0;
+	let sm : int = 0;
+	while( i <= n){
+		sm = sm + i;
+		i =  i + 1;
+	}
+	return sm;
+}
+
+fn fib(n: int) : int{
+	if(n <= 1){
+		return n;
+	}
+	return fib(n-1) + fib(n-2);
+}
+
+print "sum(1): ";
+println sum(1);
+print "sum(4): ";
+println sum(4);
+
+let j = 10;
+let y = 1;
+while(y<=j){
+	print "fib(";
+	print y;
+	print "): ";
+	println fib(y);
+	y = y + 1;
+}

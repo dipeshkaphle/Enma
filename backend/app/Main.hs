@@ -12,12 +12,13 @@ data Instr
   | PushB Bool
   | PushC Char
   | PushS String
+  | PushFn String
   | Load Int64
   | Ref Int64
   | BinOp String
   | PrefixOp String
   | Print
-  | Ret Int8
+  | Ret
   | Call String Int
   | Jmp Int64
   | Jnz Int64
@@ -30,6 +31,7 @@ data Data
   | B Bool
   | C Char
   | S String
+  | Fn String
   | Err String
 
 instance Show Data where
@@ -38,6 +40,7 @@ instance Show Data where
   show (B b) = show b
   show (C c) = show c
   show (S s) = s
+  show (Fn s) = "Fn<" ++ s ++ ">"
   show (Err s) = "Error : " ++ s
 
 -- binApply :: (a -> a -> a) -> Data -> Data -> Data
@@ -52,7 +55,8 @@ data MachineState = MachineState
   { fp :: [Int],
     ip :: Int,
     stack :: [Data],
-    stackLen :: Int,
+    mem :: [Data],
+    memoryLen :: Int,
     retAddr :: [Int],
     allLabels :: [(Int, String)],
     argsCnt :: [Int]
@@ -70,52 +74,52 @@ getLabelAddr label = List.find (\(i, l) -> l == label)
 actualIndex :: Int -> State MachineState Int
 actualIndex i = do
   st <- get
-  return $ stackLen st - (i + 1)
+  return $ memoryLen st - (i + 1)
 
 changeValAt i lst newVal =
-  let (x, _ : xs) = Prelude.splitAt i lst
-   in (x ++ newVal : xs)
+  if i == (-1)
+    then newVal : lst
+    else
+      let (x, _ : xs) = Prelude.splitAt i lst
+       in (x ++ newVal : xs)
 
 getAt :: Int -> State MachineState Data
 getAt i = do
   st <- get
-  let index = stackLen st - (i + 1)
-  return $ stack st !! index
-
--- There are quite  a few problems
---
--- - Data access is inverted due to List's nature in Haskell
--- - Remove args pushed into the stack when we return from function call
---
+  let index = memoryLen st - (i + 1)
+  return $ mem st !! index
 
 emulate :: Instr -> State MachineState (Maybe Data)
 emulate instr = do
   st <- get
   case instr of
     PushI i -> do
-      put $ st {stack = I i : stack st, stackLen = stackLen st + 1}
+      put $ st {stack = I i : stack st}
       return Nothing
     PushD d -> do
-      put $ st {stack = D d : stack st, stackLen = stackLen st + 1}
+      put $ st {stack = D d : stack st}
       return Nothing
     PushB b -> do
-      put $ st {stack = B b : stack st, stackLen = stackLen st + 1}
+      put $ st {stack = B b : stack st}
       return Nothing
     PushC c -> do
-      put $ st {stack = C c : stack st, stackLen = stackLen st + 1}
+      put $ st {stack = C c : stack st}
       return Nothing
     PushS s -> do
-      put $ st {stack = S s : stack st, stackLen = stackLen st + 1}
+      put $ st {stack = S s : stack st}
+      return Nothing
+    PushFn s -> do
+      put $ st {mem = Fn s : mem st, memoryLen = memoryLen st + 1}
       return Nothing
     Load i -> do
       index <- actualIndex (head (fp st) + fromIntegral i)
-      let newStack = tail (changeValAt index (stack st) (head $ stack st))
-      put st {stack = newStack, stackLen = stackLen st - 1}
+      let newMem = changeValAt index (mem st) (head $ stack st)
+      put st {stack = (tail . stack) st, mem = newMem, memoryLen = if index == (-1) then memoryLen st + 1 else memoryLen st}
       return Nothing
     Ref i -> do
       elem <- getAt (head (fp st) + fromIntegral i)
       let newStack = elem : stack st
-      put $ st {stack = newStack, stackLen = stackLen st + 1}
+      put $ st {stack = newStack}
       return Nothing
     BinOp o -> do
       let rhs = (head . stack) st
@@ -188,7 +192,7 @@ emulate instr = do
                     ++ show rhs
                     ++ " ,and op is "
                     ++ o
-      put st {stack = newTop : (tail . tail . stack) st, stackLen = stackLen st - 1}
+      put st {stack = newTop : (tail . tail . stack) st}
       return Nothing
     PrefixOp o -> do
       let rhs = (head . stack) st
@@ -212,28 +216,27 @@ emulate instr = do
       return Nothing
     Print -> do
       let top = (head . stack) st
-      put $ st {stack = (tail . stack) st, stackLen = stackLen st - 1}
+      put $ st {stack = (tail . stack) st}
       return $ Just top
-    Ret yes -> do
+    Ret -> do
       let newFp = (tail . fp) st
       let newIp = (head . retAddr) st
+      -- TODO
       put
         st
           { ip = newIp,
             fp = newFp,
-            stack =
-              if yes == 1
-                then (head . stack) st : drop ((head . argsCnt) st) ((tail . stack) st)
-                else drop ((head . argsCnt) st) (stack st),
+            mem =
+              drop ((head . argsCnt) st) (drop (memoryLen st - (head . fp) st) (mem st)),
+            memoryLen = (head . fp) st - (head . argsCnt) st,
             argsCnt = (tail . argsCnt) st,
-            stackLen = stackLen st - (head . argsCnt) st,
             retAddr = (tail . retAddr) st
           }
       return Nothing
     Call lbl cnt -> do
       case getLabelAddr lbl (allLabels st) of
         Just (ptr, _) -> do
-          put $ st {retAddr = ip st : retAddr st, ip = ptr, fp = stackLen st : fp st, argsCnt = cnt : argsCnt st}
+          put $ st {retAddr = ip st : retAddr st, ip = ptr, fp = memoryLen st : fp st, argsCnt = cnt : argsCnt st}
           return Nothing
         Nothing -> return Nothing
     Jmp off -> do
@@ -248,15 +251,14 @@ emulate instr = do
               I i -> i /= 0
               _ -> False
       let newStack = (tail . stack) st
-      let newLen = stackLen st - 1
       if jump
         then
           ( do
-              put $ st {ip = ip st + fromIntegral off, stack = newStack, stackLen = newLen}
+              put $ st {ip = ip st + fromIntegral off, stack = newStack}
           )
         else
           ( do
-              put st {stack = newStack, stackLen = newLen}
+              put st {stack = newStack}
           )
       return Nothing
     Label l ->
@@ -269,7 +271,7 @@ emulateAllInstrs instrs state = do
       let (a, s) = runState (emulate instr) state
       let newState = s {ip = ip s + 1}
       -- putStr $ show instr
-      -- putStr $ ":"
+      -- putStr ":"
       -- putStrLn $ show state
       case a of
         Just x -> do
@@ -300,5 +302,5 @@ main = do
       let allLines = lines file
       let instrs = Vector.fromList $ Prelude.map (\x -> read x :: Instr) allLines
       let allLabels = Vector.toList $ Vector.map extractLabelName $ Vector.filter isLabel (Vector.indexed instrs)
-      let state = MachineState {fp = [0], ip = 0, stack = [], stackLen = 0, retAddr = [], allLabels = allLabels, argsCnt = []}
+      let state = MachineState {fp = [0], ip = 0, stack = [], mem = [], memoryLen = 0, retAddr = [], allLabels = allLabels, argsCnt = []}
       emulateAllInstrs instrs state

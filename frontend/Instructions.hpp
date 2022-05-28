@@ -7,6 +7,9 @@
 #include <vector>
 
 template <typename T> struct Push { T val; };
+struct PushFn {
+  std::string val;
+};
 struct Load {
   int64_t offset;
 };
@@ -27,9 +30,7 @@ struct Not {};
 struct And {};
 struct Or {};
 struct Print {};
-struct Ret {
-  bool pop;
-};
+struct Ret {};
 struct Jnz {
   int64_t offset;
 };
@@ -52,8 +53,9 @@ struct PrefixOp {
 struct Continue {};
 struct Break {};
 
-using Instr = std::variant<Push<int64_t>, Push<double>, Push<bool>, Push<char>,
-                           Push<std::string>, Load, Ref, BinOp, PrefixOp, Print,
-                           Ret, Call, Jmp, Jnz, Lbl, Break, Continue>;
+using Instr =
+    std::variant<Push<int64_t>, Push<double>, Push<bool>, Push<char>,
+                 Push<std::string>, PushFn, Load, Ref, BinOp, PrefixOp, Print,
+                 Ret, Call, Jmp, Jnz, Lbl, Break, Continue>;
 
 std::string to_string(Instr &instr);

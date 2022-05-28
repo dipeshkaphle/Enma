@@ -1,4 +1,5 @@
-Jmp 19
+PushFn "fib"
+Jmp 21
 Label "fib"
 Ref -1
 PushI 2
@@ -6,19 +7,22 @@ BinOp "<="
 Jnz 1
 Jmp 2
 PushI 1
-Ret 1
+Ret
 Ref -1
 PushI 1
 BinOp "-"
+Load 0
 Call "fib" 1
 Ref -1
 PushI 2
 BinOp "-"
+Load 0
 Call "fib" 1
 BinOp "+"
-Ret 1
-Ret 0
+Ret
+Ret
 PushI 30
+Load 1
 Call "fib" 1
 Print
 PushS "\n"

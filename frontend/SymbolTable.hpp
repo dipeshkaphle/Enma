@@ -20,4 +20,5 @@ struct SymTable {
   tl::optional<Type> get_expr_type(expr::Expr *exp);
   tl::optional<symbol_type> get_symbol(const std::string &symbol);
   tl::optional<int64_t> get_symbol_offset(const std::string &symbol);
+  tl::optional<type_t> get_final_expr_type(expr::Expr *exp);
 };

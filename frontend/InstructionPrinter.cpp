@@ -25,17 +25,22 @@ std::string to_string(Instr &instr) {
       overloaded{
           [&](Push<int64_t> &val) { return fmt::format("PushI {}", val.val); },
           [&](Push<double> &val) { return fmt::format("PushD {}", val.val); },
-          [&](Push<bool> &val) { return fmt::format("PushB {}", val.val); },
+          [&](Push<bool> &val) {
+            return fmt::format("PushB {}", val.val ? "True" : "False");
+          },
           [&](Push<char> &val) { return fmt::format("PushC '{}'", val.val); },
           [&](Push<std::string> &val) {
             return fmt::format("PushS \"{}\"", transform_escapes(val.val));
+          },
+          [&](PushFn &val) {
+            return fmt::format("PushFn \"{}\"", transform_escapes(val.val));
           },
           [&](Load &val) { return fmt::format("Load {}", val.offset); },
           [&](Ref &val) { return fmt::format("Ref {}", val.offset); },
           [&](BinOp &val) { return fmt::format("BinOp \"{}\"", val.op); },
           [&](PrefixOp &val) { return fmt::format("PrefixOp \"{}\"", val.op); },
           [&](Print &) { return fmt::format("Print"); },
-          [&](Ret &val) { return fmt::format("Ret {}", val.pop ? 1 : 0); },
+          [&](Ret &) { return fmt::format("Ret"); },
           [&](Call &val) {
             return fmt::format("Call {} {}", val.label, val.arg_cnt);
           },

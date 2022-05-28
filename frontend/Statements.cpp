@@ -183,7 +183,6 @@ vector<std::string> FnStmt::transpile_to_cpp() {
 }
 std::vector<Instr> FnStmt::gen_bytecode(SymTable &symtable) {
   symtable.back().emplace_back(this);
-
   std::deque<std::unique_ptr<LetStmt>> params_as_let_stmt;
   std::ranges::transform(
       this->params, std::back_inserter(params_as_let_stmt),
@@ -208,7 +207,7 @@ std::vector<Instr> FnStmt::gen_bytecode(SymTable &symtable) {
     auto codegen = body_stmt->gen_bytecode(symtable);
     instrs.insert(instrs.end(), codegen.begin(), codegen.end());
   }
-  instrs.emplace_back(Ret{.pop = false});
+  instrs.emplace_back(Ret{});
   symtable.pop_frame();
   std::ranges::for_each(params_as_let_stmt, [&](std::unique_ptr<LetStmt> &) {
     symtable.back().pop_back();
@@ -216,6 +215,7 @@ std::vector<Instr> FnStmt::gen_bytecode(SymTable &symtable) {
 
   auto sz = (int64_t)instrs.size();
   instrs.insert(instrs.begin(), Jmp{.offset = sz});
+  instrs.insert(instrs.begin(), PushFn{.val = this->name.lexeme});
   return instrs;
 }
 
@@ -304,8 +304,8 @@ vector<std::string> LetStmt::transpile_to_cpp() {
 std::vector<Instr> LetStmt::gen_bytecode(SymTable &symtable) {
   symtable.back().emplace_back(this);
   auto instrs = this->initializer_expr->gen_bytecode(symtable);
-  // instrs.emplace_back(
-  // Load{.offset = symtable.get_symbol_offset(this->name.lexeme).value()});
+  instrs.emplace_back(
+      Load{.offset = symtable.get_symbol_offset(this->name.lexeme).value()});
   return instrs;
 }
 
@@ -370,10 +370,8 @@ std::vector<Instr> ReturnStmt::gen_bytecode(SymTable &symtable) {
     auto tmp = this->value.value().get();
     auto val_code = tmp->gen_bytecode(symtable);
     instrs.insert(instrs.end(), val_code.begin(), val_code.end());
-    instrs.emplace_back(Ret{.pop = true});
-  } else {
-    instrs.emplace_back(Ret{.pop = false});
   }
+  instrs.emplace_back(Ret{});
   return instrs;
 }
 
