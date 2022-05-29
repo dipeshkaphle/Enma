@@ -1,0 +1,5 @@
+(executable
+ (public_name enma-backend)
+ (name main)
+ (libraries ocaml_backend_lib)
+ )
