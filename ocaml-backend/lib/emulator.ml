@@ -1,5 +1,6 @@
 open Data;;
 open Instr;;
+open Vector;;
 type out_and_state = data option * State.machine_state
 
 
@@ -28,18 +29,21 @@ let emulate ( st : State.machine_state ) ( instr:  Instr.instr ) : out_and_state
   | PushB b -> (None, {st with stack= ( B b )::st.stack })
   | PushC c -> (None, {st with stack= ( C c )::st.stack })
   | PushS s -> (None, {st with stack= ( S s )::st.stack })
-  | PushFn s -> (None, {st with mem = Array.append  st.mem [|Fn s|]})
+  | PushFn s -> begin
+    let () = Vector.push_back st.mem (Fn s) in
+    (None, st )
+  end
   | Load o -> 
       let index = ( List.hd st.fp ) + (Int64.to_int o) in
-      let new_mem = if index = (Array.length st.mem) then
-        Array.append st.mem [|List.hd st.stack|]
-      else let () = st.mem.(index) <- List.hd st.stack in
-          st.mem
+      let () = if index = (Vector.length st.mem) then
+        Vector.push_back st.mem (List.hd st.stack)
+      else 
+        Vector.set st.mem index (List.hd st.stack)
       in
-      (None, {st with mem = new_mem ; stack = ( List.tl st.stack ) })
+      (None, {st with stack = ( List.tl st.stack ) })
   | Ref o ->
       let index =  ( List.hd st.fp )  + ( Int64.to_int o ) in
-      let elem =  st.mem.(index) in
+      let elem =  Vector.get st.mem index in
       (None, {st with stack = elem::st.stack })
   | BinOp o -> 
       let rhs =   List.hd st.stack in
@@ -141,20 +145,21 @@ let emulate ( st : State.machine_state ) ( instr:  Instr.instr ) : out_and_state
   | Ret ->
       let new_fp = List.tl st.fp in
       let new_ip = List.hd st.ret_addr in
-      let to_be_dropped = ( ( Array.length st.mem  ) - (List.hd st.fp)) + (List.hd st.args_cnt)  in
+      let to_be_dropped = ( ( Vector.length st.mem  ) - (List.hd st.fp)) + (List.hd st.args_cnt)  in
+      let () = Vector.drop_last to_be_dropped st.mem in
       let new_state = 
         { st with
         ip = new_ip;
         fp = new_fp;
         args_cnt = List.tl st.args_cnt;
         ret_addr = List.tl st.ret_addr;
-        mem =  Array.sub st.mem 0 (( Array.length st.mem ) - to_be_dropped) ;
+        (* mem =  Array.sub st.mem 0 (( Array.length st.mem ) - to_be_dropped) ; *)
         } in
       (None, new_state)
   | Call (lbl,cnt) -> 
     let res = match Util.get_label_addr lbl st.all_labels with
       | Some (ptr,_) ->  
-          (None, {st with ret_addr= st.ip::st.ret_addr; ip =ptr;fp=(Array.length st.mem)::st.fp;args_cnt=cnt::st.args_cnt })
+          (None, {st with ret_addr= st.ip::st.ret_addr; ip =ptr;fp=(Vector.length st.mem)::st.fp;args_cnt=cnt::st.args_cnt })
       | None -> (None ,st)
       in
       res

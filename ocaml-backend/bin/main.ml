@@ -16,7 +16,7 @@ let () =
                             |> (List.map Util.extract_label_name) in
                 let state : State.machine_state =  { 
                     fp = [0]; ip = 0; stack = []; 
-                    mem = [||]; ret_addr= []; 
+                    mem = (Vector.Vector.create 1000) ; ret_addr= []; 
                     all_labels = all_labels; args_cnt = []
                 } in
                 Emulator.emulate_all_instrs instrs state

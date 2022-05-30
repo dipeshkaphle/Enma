@@ -11,5 +11,13 @@ int main() {
     return fib(n - 1) + fib(n - 2);
   };
 
-  cout << fib(30) << endl;
+  int i = 1;
+  int j = 30;
+  while (i <= j) {
+    cout << "";
+    cout << i;
+    cout << "";
+    cout << fib(i) << endl;
+    i = i + 1;
+  }
 }

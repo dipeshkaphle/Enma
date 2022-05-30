@@ -5,4 +5,12 @@ fn fib(n : int ) : int {
 	return fib(n-1) + fib(n-2);
 }
 
-println fib(30) ;
+let i = 1;
+let j = 30;
+while (i <=  j){
+	print "fib(";
+	print i;
+	print ") : ";
+	println fib(i) ;
+	i = i + 1;
+}

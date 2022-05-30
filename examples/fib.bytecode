@@ -21,9 +21,29 @@ Call "fib" 1
 BinOp "+"
 Ret
 Ret
-PushI 30
+PushI 1
 Load 1
+PushI 30
+Load 2
+Ref 1
+Ref 2
+BinOp "<="
+Jnz 1
+Jmp 17
+PushS "fib("
+Print
+Ref 1
+Print
+PushS ") : "
+Print
+Ref 1
+Load 3
 Call "fib" 1
 Print
 PushS "\n"
 Print
+Ref 1
+PushI 1
+BinOp "+"
+Load 1
+Jmp -22
