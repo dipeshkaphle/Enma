@@ -12,3 +12,8 @@ let get_label_addr label l = List.find_opt (fun (_,l) -> l=label) l
 
 let safe_get_index arr ind = try Some (arr.(ind)) with
     _ -> None
+
+let (--) i j = 
+    let rec aux n acc =
+      if n < i then acc else aux (n-1) (n :: acc)
+    in aux j [] ;;
